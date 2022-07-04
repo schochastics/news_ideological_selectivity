@@ -1,7 +1,8 @@
 library(igraph)
 library(tidyverse)
 pal <- c("#9F248FFF", "#FFCE4EFF", "#017A4AFF", "#F9791EFF", "#244579FF", "#C6242DFF")
-# density of networks ----
+
+# density of pmi networks ----
 tbl <- readRDS("processed_data/networks.RDS")
 tbl[["density"]] <- sapply(tbl[["network"]], graph.density)
 tbl[["political"]] <- if_else(tbl[["political"]],"political","non-political")
@@ -18,3 +19,5 @@ ggplot(filter(tbl,reach==0.01 & type=="pmi")) +
   scale_color_manual(values=pal,name="sample")+
   labs(x = "cutoff (in sec)",y = "network density")+
   guides(colour = guide_legend(override.aes = list(size=2),nrow = 1))
+
+ggsave("figures/pmi_density.pdf",width = 10,height=6)

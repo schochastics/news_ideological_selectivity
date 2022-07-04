@@ -144,5 +144,6 @@ ggplot(seg_scores_long) +
   labs(x = "cutoff (in sec)",y = "segregation score")+
   guides(colour = guide_legend(override.aes = list(size=2),nrow = 1))
 
+ggsave("figures/segregation_scores.pdf",width = 10,height=6)
 
 
