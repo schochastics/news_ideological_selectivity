@@ -1,0 +1,9 @@
+replication/
+reports/
+reuters_app/
+data/
+.Rproj.user/
+figures/old/
+Rscripts/testing/
+processed_data/
+figures/
