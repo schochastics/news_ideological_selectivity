@@ -23,6 +23,7 @@ res <- tibble(
   network = list()
 )
 for (f in fl) {
+  cat(f,"\n")
   ctry <- str_remove(str_extract(f, "[a-z]{2}\\."), "\\.")
   dt <- data.table::fread(f)
   for (cval in cutoffs) {
@@ -31,8 +32,8 @@ for (f in fl) {
       gpols <- create_networks(dt, political = TRUE, weights = FALSE, fixN = fixN, reach = reach, cutoff = cval)
 
       tmp <- tibble(
-        country = rep(ctry, 6), type = c(names(gnews), names(gpols)),
-        reach = reach, cutoff = cval, political = rep(c(FALSE, TRUE), each = 3), fixN = fixN,
+        country = rep(ctry, 8), type = c(names(gnews), names(gpols)),
+        reach = reach, cutoff = cval, political = rep(c(FALSE, TRUE), each = 4), fixN = fixN,
         network = c(unname(gnews), unname(gpols))
       )
 
