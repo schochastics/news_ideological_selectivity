@@ -1,3 +1,4 @@
+# network extraction methods ----
 pmi <- function(A, t = 0) {
   reach <- rowSums(A) / ncol(A)
   exp_mat <- outer(reach, reach, "*")
@@ -27,6 +28,8 @@ disparity1 <- function(A, p = 0.05) {
 sdsm1 <- function(A, p = 0.05) {
   suppressMessages(backbone::sdsm(A, class = "igraph", alpha = p))
 }
+
+# create all networks from the data ----
 
 create_networks <- function(dt, political = FALSE, weights = FALSE, fixN = FALSE, reach = 0.01, cutoff = 3) {
   n_panelist <- length(unique(dt[["panelist_id"]]))
