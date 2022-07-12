@@ -98,29 +98,29 @@ news <- lapply(cutoffs,function(y) {
   }
   dt <- dt[type!=""& political=="political" & duration>=y]
   dt[survey, on = .(panelist_id), leftright := leftright]
-  dt[leftright!=6,`:=`(dem=fifelse(leftright<=5,1,0),rep=fifelse(leftright>=7,1,0))]
-  dt1 <- unique(dt[,.(domain,panelist_id,dem,rep)])
+  dt[,`:=`(dem=fifelse(leftright<=5,1,0),rep=fifelse(leftright>=7,1,0),cen=fifelse(leftright==6,1,0))]
+  dt1 <- unique(dt[,.(domain,panelist_id,dem,rep,cen)])
+  # dt1 <- dt
   dt1 <- dt1[!is.na(dem)]
-  rep_scores <- dt1[,.(rep_frac=sum(rep)/sum(dem+rep)),by=.(domain)]
+  # rep_scores <- dt1[,.(rep_frac=sum(rep)/sum(dem+rep+cen)),by=.(domain)]
+  rep_scores <- dt1[,.(rep_frac=sum(rep-dem)/sum(dem+rep)),by=.(domain)]
   dt1[rep_scores,on = .(domain), rep_frac := rep_frac]
-  dt1[,.(avg_rep_exp=mean(rep_frac),ideo=fifelse(dem==1,-1,1)),.(panelist_id)]
+  dt1[,.(avg_rep_exp=mean(rep_frac,na.rm=TRUE),ideo=fifelse(dem==1,-1,fifelse(cen==1,0,1))),.(panelist_id)]
 })
 
-map_dfr(news,identity,.id="id") |>
-  ggplot(aes(avg_rep_exp))+geom_density(aes(fill=as.factor(id)),alpha=0.4)
 map_dfr(news,identity,.id="id") |>
   mutate(cutoff=cutoffs[as.numeric(id)]) |>
   mutate(strip_lab = paste0("cutoff = ",cutoff)) |>
   mutate(strip_lab = fct_reorder(strip_lab,cutoff))|>
   ggplot(aes(avg_rep_exp,group=ideo,fill=as.factor(ideo)))+
   geom_density(alpha=0.5)+
-  scale_fill_manual(values=c("blue","red"),labels=c("left","right"),name="individual alignment")+
+  scale_fill_manual(values=c("blue","yellow","red"),labels=c("left","center","right"),name="individual alignment")+
   labs(x="average exposure to conservative news media")+
   facet_wrap(strip_lab~.,nrow=1)+
   theme_minimal()+
   theme(legend.position = "bottom")
 
-ggsave("figures/old/explore/indiv_exposure.png",width = 14,height=4,bg = "white")  
+ggsave("figures/old/explore/indiv_exposure2.png",width = 14,height=4,bg = "white")  
 
 
 pol <- lapply(cutoffs,function(y) {sapply(fl,function(x){
