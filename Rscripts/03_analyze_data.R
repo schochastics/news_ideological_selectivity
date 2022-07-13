@@ -1,7 +1,7 @@
 library(tidyverse)
 library(data.table)
 library(readxl)
-
+library(patchwork)
 fl <- list.files("processed_data/tracking/")
 survey <- as.data.table(readRDS("data/survey_data_r.rds"))
 parties <- read_xlsx("data/party_families.xlsx")
@@ -97,7 +97,7 @@ news <- lapply(cutoffs,function(y) { lapply(fl,function(x){
   }
   dt <- dt[type!=""& duration>=y]
   dt[survey, on = .(panelist_id), leftright := leftright]
-  dt[,`:=`(dem=fifelse(leftright<=5,1,0),rep=fifelse(leftright>=7,1,0),cen=fifelse(leftright==6,1,0))]
+  dt[,`:=`(dem=fifelse(leftright<=4,1,0),rep=fifelse(leftright>=8,1,0),cen=fifelse(leftright%in%c(5,6,7),1,0))]
   dt1 <- unique(dt[,.(domain,panelist_id,dem,rep,cen)])
   # dt1 <- dt
   dt1 <- dt1[!is.na(dem)]
@@ -117,7 +117,7 @@ pol <- lapply(cutoffs,function(y) { lapply(fl,function(x){
   }
   dt <- dt[type!=""& political=="political" & duration>=y]
   dt[survey, on = .(panelist_id), leftright := leftright]
-  dt[,`:=`(dem=fifelse(leftright<=5,1,0),rep=fifelse(leftright>=7,1,0),cen=fifelse(leftright==6,1,0))]
+  dt[,`:=`(dem=fifelse(leftright<=4,1,0),rep=fifelse(leftright>=8,1,0),cen=fifelse(leftright%in%c(5,6,7),1,0))]
   dt1 <- unique(dt[,.(domain,panelist_id,dem,rep,cen)])
   # dt1 <- dt
   dt1 <- dt1[!is.na(dem)]
@@ -159,7 +159,7 @@ p1+p2+
   plot_annotation(tag_levels = "a",tag_suffix = ")")+
   plot_layout(ncol=2,guides = "collect") & theme(legend.position = 'bottom')
 
-ggsave("figures/old/explore/indiv_exposure4.png",width = 14*1.5,height=5*1.5,bg = "white")  
+ggsave("figures/old/explore/indiv_exposure5.png",width = 14*1.5,height=5*1.5,bg = "white")  
 
 
 pol <- lapply(cutoffs,function(y) {sapply(fl,function(x){
