@@ -2,12 +2,13 @@ library(tidyverse)
 library(data.table)
 library(readxl)
 library(patchwork)
+library(overlapping)
 fl <- list.files("processed_data/tracking/")
 survey <- as.data.table(readRDS("data/survey_data_r.rds"))
 parties <- read_xlsx("data/party_families.xlsx")
 fixN <- FALSE
 cutoffs <- c(3,10,20,60,120)
-
+boundaries <- list( from = -1, to = 1 )
 # compute ----
 ## segregation scores ----
 
@@ -208,7 +209,7 @@ dens_news <- map_dfr(news,identity,.id="id") |>
   pivot_wider(names_from = ideo,values_from = d)|>
   rename(left=3,center=4,right=5)|>
   rowwise()|>
-  mutate(coef=unname(overlap(list(X1=left,X2=right))$OV),
+  mutate(coef=unname(overlap(list(X1=left,X2=right),boundaries = boundaries)$OV),
          political="non-political")
 
 
@@ -220,7 +221,7 @@ dens_pol <- map_dfr(pol,identity,.id="id") |>
   pivot_wider(names_from = ideo,values_from = d)|>
   rename(left=3,center=4,right=5)|>
   rowwise()|>
-  mutate(coef=unname(overlap(list(X1=left,X2=right))$OV),
+  mutate(coef=unname(overlap(list(X1=left,X2=right),boundaries = boundaries)$OV),
          political="political")
 
 bind_rows(dens_news,dens_pol)|>
@@ -239,6 +240,23 @@ bind_rows(dens_news,dens_pol)|>
   guides(colour = guide_legend(override.aes = list(size=2),nrow = 1))
 
 ggsave("figures/old/explore/overlap_coef.png",width = 10,height=6,bg = "white")
+
+# hyperpartisian demo ----
+dt <- data.table::fread(paste0("processed_data/tracking/",x))
+dt <- dt[type!="" & duration>=y]
+dt[survey, on = .(panelist_id), `:=`(leftright = leftright,age = age)]
+dt[,`:=`(dem=fifelse(leftright<=4,1,0),rep=fifelse(leftright>=8,1,0),cen=fifelse(leftright%in%c(5,6,7),1,0))]
+dt1 <- unique(dt[,.(domain,panelist_id,dem,rep,age)])
+rep_scores <- dt1[,.(rep_frac=sum(rep-dem)/sum(dem+rep)),by=.(domain)]
+dt1[rep_scores,on = .(domain), fringe := (abs(rep_frac)>0.8)]
+
+tst <- dt1[,.(age=mean(age),fringe=sum(fringe,na.rm=TRUE),nonfringe=sum(1-fringe,na.rm=TRUE)),by=.(panelist_id)]
+tst %>% 
+  mutate(ishyper=fringe>0 & nonfringe==0) %>% 
+  group_by(ishyper) %>% 
+  dplyr::summarise(m=mean(age,na.rm=TRUE))
+
+
 
 # plotting ----
 pal <- c("#9F248FFF", "#FFCE4EFF", "#017A4AFF", "#F9791EFF", "#244579FF", "#C6242DFF")
