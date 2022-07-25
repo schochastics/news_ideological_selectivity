@@ -241,7 +241,7 @@ bind_rows(dens_news,dens_pol)|>
 
 ggsave("figures/old/explore/overlap_coef.png",width = 10,height=6,bg = "white")
 
-# hyperpartisian demo ----
+## hyperpartisian demo ----
 dt <- data.table::fread(paste0("processed_data/tracking/",x))
 dt <- dt[type!="" & duration>=y]
 dt[survey, on = .(panelist_id), `:=`(leftright = leftright,age = age)]
