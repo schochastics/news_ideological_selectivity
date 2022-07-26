@@ -48,6 +48,14 @@ tbl <- map_dfr(c(news,pol),identity) |>
                                 case=="uk.csv" ~ "United Kingdom",
                                 case=="us.csv" ~ "USA"))
 
+# tbl %>% 
+#   split(list(.$name,.$type)) %>%
+#   map(~ lm(value ~ cutoff, data = .)) %>%
+#   map(coef) %>%
+#   map_dbl("cutoff") %>% 
+#   matrix(ncol=2)
+
+
 plots <- unique(tbl$name_long)
 cases <- unique(tbl$cases_long)
 pList <- lapply(plots,function(px){
