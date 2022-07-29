@@ -102,3 +102,13 @@ create_networks <- function(dt, political = FALSE, weights = FALSE, fixN = FALSE
   
   list(pmi = l1, disparity = l2, phi = l3,sdsm = l4)
 }
+
+#population sd as used by Fletcher et al 2020
+psd <- function(x,n){
+  if(!missing(n)){
+    stopifnot(length(n)==length(x))
+    x <- rep(x,n)
+  }
+  mx <- mean(x)
+  sqrt(mean((x-mx)^2))
+}

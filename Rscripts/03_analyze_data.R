@@ -241,22 +241,59 @@ bind_rows(dens_news,dens_pol)|>
 
 ggsave("figures/old/explore/overlap_coef.png",width = 10,height=6,bg = "white")
 
-## hyperpartisian demo ----
-dt <- data.table::fread(paste0("processed_data/tracking/",x))
-dt <- dt[type!="" & duration>=y]
-dt[survey, on = .(panelist_id), `:=`(leftright = leftright,age = age)]
-dt[,`:=`(dem=fifelse(leftright<=4,1,0),rep=fifelse(leftright>=8,1,0),cen=fifelse(leftright%in%c(5,6,7),1,0))]
-dt1 <- unique(dt[,.(domain,panelist_id,dem,rep,age)])
-rep_scores <- dt1[,.(rep_frac=sum(rep-dem)/sum(dem+rep)),by=.(domain)]
-dt1[rep_scores,on = .(domain), fringe := (abs(rep_frac)>0.8)]
 
-tst <- dt1[,.(age=mean(age),fringe=sum(fringe,na.rm=TRUE),nonfringe=sum(1-fringe,na.rm=TRUE)),by=.(panelist_id)]
-tst %>% 
-  mutate(ishyper=fringe>0 & nonfringe==0) %>% 
-  group_by(ishyper) %>% 
-  dplyr::summarise(m=mean(age,na.rm=TRUE))
+## pop sd from fletcher ----
+news <- map_dfr(cutoffs,function(y) { lapply(fl,function(x){
+  dt <- data.table::fread(paste0("processed_data/tracking/",x))
+  if(fixN){
+    peeps <- unique(dt[political=="political"][,.(panelist_id)])[["panelist_id"]]
+    dt <- dt[panelist_id%in%peeps]
+  }
+  dt <- dt[type!=""& duration>=y]
+  dt[survey, on = .(panelist_id), leftright := leftright]
+  dt[,ideo:=fifelse(leftright<=4,-1,fifelse(leftright>=8,1,0))]
+  dt1 <- unique(dt[,.(domain,panelist_id,ideo)])
+  dt1 <- dt1[!is.na(ideo)]
+  dt2 <- dt1[,.(avg_ideo=mean(ideo),N=.N),by=.(domain)]
+  dt2[,cor_avg_ideo := avg_ideo-mean(dt1$ideo)]
+  tibble(country = x,cutoff = y,popsd = psd(dt2$cor_avg_ideo,n=dt2$N), type="all news")
+})
+})
 
+pol <- map_dfr(cutoffs,function(y) { lapply(fl,function(x){
+  dt <- data.table::fread(paste0("processed_data/tracking/",x))
+  if(fixN){
+    peeps <- unique(dt[political=="political"][,.(panelist_id)])[["panelist_id"]]
+    dt <- dt[panelist_id%in%peeps]
+  }
+  dt <- dt[type!=""& political=="political" & duration>=y]
+  dt[survey, on = .(panelist_id), leftright := leftright]
+  dt[,ideo:=fifelse(leftright<=4,-1,fifelse(leftright>=8,1,0))]
+  dt1 <- unique(dt[,.(domain,panelist_id,ideo)])
+  dt1 <- dt1[!is.na(ideo)]
+  dt2 <- dt1[,.(avg_ideo=mean(ideo),N=.N),by=.(domain)]
+  dt2[,cor_avg_ideo := avg_ideo-mean(dt1$ideo)]
+  tibble(country = x,cutoff = y,popsd = psd(dt2$cor_avg_ideo,n=dt2$N), type="political news")
+})
+})
 
+bind_rows(news,pol) |> 
+  mutate(cases_long = case_when(country=="de.csv" ~ "Germany",
+                                country=="es.csv" ~ "Spain",
+                                country=="fr.csv" ~ "France",
+                                country=="it.csv" ~ "Italy",
+                                country=="uk.csv" ~ "United Kingdom",
+                                country=="us.csv" ~ "USA"))|>
+  ggplot(aes(x=cutoff,y=popsd,col=type)) +
+  geom_point() +
+  geom_line()+
+  scale_color_manual(values=c("political news" = "#AA8939","all news" = "#303C74"),name="")+
+  theme_minimal()+
+  facet_wrap(cases_long~.)+
+  theme(legend.position = "bottom")+
+  labs(x="cutoff",y="polarization score")
+
+ggsave("figures/old/explore/polarization_scores.png",width = 10,height=6,bg = "white")
 
 # plotting ----
 pal <- c("#9F248FFF", "#FFCE4EFF", "#017A4AFF", "#F9791EFF", "#244579FF", "#C6242DFF")
