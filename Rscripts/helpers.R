@@ -37,7 +37,9 @@ create_networks <- function(dt, political = FALSE, weights = FALSE, fixN = FALSE
   n_outlets <- length(outlets)
   dt1 <- dt[domain %in% outlets]
   if (fixN) {
-    peeps <- unique(dt[political == "political"][, .(panelist_id)])[["panelist_id"]]
+    peeps <- dt[type!=""& political=="political" & duration>=120]
+    peeps <- unique(peeps[["panelist_id"]])
+    # peeps <- unique(dt[political == "political"][, .(panelist_id)])[["panelist_id"]]
     dt1 <- dt1[panelist_id %in% peeps]
   }
   if (!political) {

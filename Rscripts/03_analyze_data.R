@@ -6,7 +6,7 @@ library(overlapping)
 fl <- list.files("processed_data/tracking/")
 survey <- as.data.table(readRDS("data/survey_data_r.rds"))
 parties <- read_xlsx("data/party_families.xlsx")
-fixN <- FALSE
+fixN <- TRUE
 cutoffs <- c(3,10,20,60,120)
 boundaries <- list( from = -1, to = 1 )
 # compute ----
@@ -15,7 +15,8 @@ boundaries <- list( from = -1, to = 1 )
 news <- lapply(cutoffs,function(y) {sapply(fl,function(x){
   dt <- data.table::fread(paste0("processed_data/tracking/",x))
   if(fixN){
-    peeps <- unique(dt[political=="political"][,.(panelist_id)])[["panelist_id"]]
+    peeps <- dt[type!=""& political=="political" & duration>=120]
+    peeps <- unique(peeps[["panelist_id"]])
     dt <- dt[panelist_id%in%peeps]
   }
   dt <- dt[type!="" & duration>=y]
@@ -38,7 +39,8 @@ news <- lapply(cutoffs,function(y) {sapply(fl,function(x){
 pol <- lapply(cutoffs,function(y) {sapply(fl,function(x){
   dt <- data.table::fread(paste0("processed_data/tracking/",x))
   if(fixN){
-    peeps <- unique(dt[political=="political"][,.(panelist_id)])[["panelist_id"]]
+    peeps <- dt[type!=""& political=="political" & duration>=120]
+    peeps <- unique(peeps[["panelist_id"]])
     dt <- dt[panelist_id%in%peeps]
   }
   dt <- dt[type!="" & political=="political"& duration>=y]
@@ -73,7 +75,8 @@ do.call("rbind",news) %>%
 news <- lapply(cutoffs,function(y) {sapply(fl,function(x){
   dt <- data.table::fread(paste0("processed_data/tracking/",x))
   if(fixN){
-    peeps <- unique(dt[political=="political"][,.(panelist_id)])[["panelist_id"]]
+    peeps <- dt[type!=""& political=="political" & duration>=120]
+    peeps <- unique(peeps[["panelist_id"]])
     dt <- dt[panelist_id%in%peeps]
   }
   dt <- dt[type!="" & duration>=y]
@@ -96,7 +99,8 @@ news <- lapply(cutoffs,function(y) {sapply(fl,function(x){
 pol <- lapply(cutoffs,function(y) {sapply(fl,function(x){
   dt <- data.table::fread(paste0("processed_data/tracking/",x))
   if(fixN){
-    peeps <- unique(dt[political=="political"][,.(panelist_id)])[["panelist_id"]]
+    peeps <- dt[type!=""& political=="political" & duration>=120]
+    peeps <- unique(peeps[["panelist_id"]])
     dt <- dt[panelist_id%in%peeps]
   }
   dt <- dt[type!="" & political=="political"& duration>=y]
@@ -131,7 +135,8 @@ do.call("rbind",news) %>%
 news <- lapply(cutoffs,function(y) { lapply(fl,function(x){
   dt <- data.table::fread(paste0("processed_data/tracking/",x))
   if(fixN){
-    peeps <- unique(dt[political=="political"][,.(panelist_id)])[["panelist_id"]]
+    peeps <- dt[type!=""& political=="political" & duration>=120]
+    peeps <- unique(peeps[["panelist_id"]])
     dt <- dt[panelist_id%in%peeps]
   }
   dt <- dt[type!=""& duration>=y]
@@ -152,7 +157,8 @@ news <- lapply(cutoffs,function(y) { lapply(fl,function(x){
 pol <- lapply(cutoffs,function(y) { lapply(fl,function(x){
   dt <- data.table::fread(paste0("processed_data/tracking/",x))
   if(fixN){
-    peeps <- unique(dt[political=="political"][,.(panelist_id)])[["panelist_id"]]
+    peeps <- dt[type!=""& political=="political" & duration>=120]
+    peeps <- unique(peeps[["panelist_id"]])
     dt <- dt[panelist_id%in%peeps]
   }
   dt <- dt[type!=""& political=="political" & duration>=y]
@@ -246,7 +252,8 @@ ggsave("figures/old/explore/overlap_coef.png",width = 10,height=6,bg = "white")
 news <- map_dfr(cutoffs,function(y) { lapply(fl,function(x){
   dt <- data.table::fread(paste0("processed_data/tracking/",x))
   if(fixN){
-    peeps <- unique(dt[political=="political"][,.(panelist_id)])[["panelist_id"]]
+    peeps <- dt[type!=""& political=="political" & duration>=120]
+    peeps <- unique(peeps[["panelist_id"]])
     dt <- dt[panelist_id%in%peeps]
   }
   dt <- dt[type!=""& duration>=y]
@@ -263,7 +270,8 @@ news <- map_dfr(cutoffs,function(y) { lapply(fl,function(x){
 pol <- map_dfr(cutoffs,function(y) { lapply(fl,function(x){
   dt <- data.table::fread(paste0("processed_data/tracking/",x))
   if(fixN){
-    peeps <- unique(dt[political=="political"][,.(panelist_id)])[["panelist_id"]]
+    peeps <- dt[type!=""& political=="political" & duration>=120]
+    peeps <- unique(peeps[["panelist_id"]])
     dt <- dt[panelist_id%in%peeps]
   }
   dt <- dt[type!=""& political=="political" & duration>=y]

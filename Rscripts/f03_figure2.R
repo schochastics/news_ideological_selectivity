@@ -2,12 +2,6 @@ library(igraph)
 library(tidyverse)
 library(patchwork)
 
-fl <- list.files("processed_data/tracking/")
-survey <- as.data.table(readRDS("data/survey_data_r.rds"))
-parties <- read_xlsx("data/party_families.xlsx")
-fixN <- FALSE
-cutoffs <- c(3,10,20,60,120)
-
 net <- readRDS("processed_data/networks.RDS")
 net[["value"]] <- sapply(net[["network"]], graph.density)
 net[["political"]] <- if_else(net[["political"]],"political news","all news")
@@ -39,6 +33,7 @@ tbl <- bind_rows(net,seg_scores_long)
 
 plots <- unique(tbl$type)
 cases <- unique(tbl$cases_long)
+
 pList <- lapply(plots,function(px){
   lapply(cases,function(cy){
     tbl|>

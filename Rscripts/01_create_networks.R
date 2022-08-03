@@ -9,7 +9,7 @@ if (!dir.exists("processed_data/networks")) dir.create("processed_data/networks"
 # parameters ----
 cutoffs <- c(3, 10, 20, 60, 120)
 reaches <- c(0.01, 0.03, 0.05)
-fixN <- FALSE
+fixN <- TRUE
 
 # create all networks ----
 fl <- list.files("processed_data/tracking", full.names = TRUE)
