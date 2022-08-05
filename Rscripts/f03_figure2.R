@@ -29,7 +29,9 @@ seg_scores_long <- seg_scores %>%
   mutate(type="segregation score") %>% 
   select(cases_long,type,political,cutoff,value)
 
-tbl <- bind_rows(net,seg_scores_long)
+
+
+tbl <- bind_rows(net,seg_scores_long,readRDS("processed_data/diversity_scores.RDS"))
 
 plots <- unique(tbl$type)
 cases <- unique(tbl$cases_long)
