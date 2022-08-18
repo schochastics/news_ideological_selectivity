@@ -9,10 +9,10 @@ if (!dir.exists("processed_data/networks")) dir.create("processed_data/networks"
 # parameters ----
 cutoffs <- c(3, 10, 20, 60, 120)
 reaches <- c(0.01, 0.03, 0.05)
-fixN <- TRUE
+fixN <- FALSE
 
 # create all networks ----
-fl <- list.files("processed_data/tracking", full.names = TRUE)
+fl <- list.files("processed_data/tracking/news_only", full.names = TRUE,pattern = "csv")
 res <- tibble(
   country = character(0),
   type = character(0),

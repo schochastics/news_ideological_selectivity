@@ -546,7 +546,7 @@ ggsave("figures/old/explore/overlap_coef.png",width = 10,height=6,bg = "white")
 
 ## pop sd from fletcher ----
 news <- map_dfr(cutoffs,function(y) { lapply(fl,function(x){
-  dt <- data.table::fread(paste0("processed_data/tracking/",x))
+  dt <- data.table::fread(paste0("processed_data/tracking/news_only/",x))
   if(fixN){
     peeps <- dt[type!=""& political=="political" & duration>=120]
     peeps <- unique(peeps[["panelist_id"]])
