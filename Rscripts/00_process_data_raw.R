@@ -54,3 +54,14 @@ for (i in c(5,6)) {
   
   fwrite(dt1, paste0("processed_data/tracking/", out_files[i]))
 }
+
+if (!dir.exists("processed_data/tracking/news_only")) dir.create("processed_data/tracking/news_only")
+
+fl <- list.files("processed_data/tracking",full.names = TRUE,pattern = "csv")
+
+for(i in seq_along(fl)){
+  cat(fl[i],"\n")
+  dt <- fread(fl[i])
+  dtnews <- dt[type!=""]
+  fwrite(dtnews,stringr::str_replace(fl[i],"tracking","tracking/news_only"))
+}
