@@ -24,16 +24,18 @@ for (i in seq_along(fl)) {
   dt[, visit := cumsum(url != shift(url, n = 1, type = "lag", fill = 0)), by = .(panelist_id)]
   dt[, day := as.Date(timestamp)]
 
-  dt1 <- dt[, .(visits = .N, duration = sum(as.numeric(duration), na.rm = TRUE)),
+  dt1 <- suppressWarnings(dt[, .(visits = .N, duration = sum(as.numeric(duration), na.rm = TRUE)),
     by = .(panelist_id, visit, url, domain, day)
-  ]
+  ])
   dt1 <- dt1[!is.na(duration)]
+  dt1[,visit:=NULL]
   dt1[, newsportal := grepl(paste(domain_lists$newsportals, collapse = "|"), url)]
   dt1[, domain := fcase(newsportal, paste0(domain, "/NEWS"), !newsportal, domain)]
   dt1[political_urls, on = .(url), political := political]
   dt1[news_types, on = .(domain), type := type]
   dt1[, type := fcase(newsportal, "Portal news", !newsportal, type)]
-
+  dt1[,newsportal:=NULL]
+  
   if (!dir.exists("processed_data")) dir.create("processed_data")
   if (!dir.exists("processed_data/tracking")) dir.create("processed_data/tracking")
 
