@@ -136,7 +136,7 @@ p2 <- ggplot(plt_tbl2,aes(x=as.factor(cutoff),y=value,color=name)) +
 
 p <- p1 + p2
 
-ggsave("figures/figure1.pdf",width=18,height=8)
+ggsave("figures/figure1.pdf",width=21,height=8)
  
 ##----------------------------------------------------------------------------##
 # Comparison pol/nonpol ----
