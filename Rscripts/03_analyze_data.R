@@ -1,17 +1,15 @@
 library(tidyverse)
 library(data.table)
-library(readxl)
 library(patchwork)
-library(overlapping)
 fl <- list.files("processed_data/tracking/news_only/",pattern = "csv")
 survey <- as.data.table(readRDS("data/survey_data_r.rds"))
-parties <- read_xlsx("data/party_families.xlsx")
+# parties <- read_xlsx("data/party_families.xlsx")
 fixN <- FALSE
 visits <- TRUE
-cutoffs <- c(3,10,20,60,120)
-boundaries <- list( from = -1, to = 1 )
+cutoffs <- c(3,10,30,60,120)
+
 # compute ----
-## segregation scores ----
+## segregation scores (isolation index)----
 
 news <- lapply(cutoffs,function(y) {sapply(fl,function(x){
   dt <- data.table::fread(paste0("processed_data/tracking/news_only/",x))
