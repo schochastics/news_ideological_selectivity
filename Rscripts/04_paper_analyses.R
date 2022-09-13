@@ -1,6 +1,6 @@
 library(tidyverse)
 library(data.table)
-
+library(patchwork)
 fl <- list.files("processed_data/tracking/news_only/",pattern = "csv")
 cutoffs <- c(3,10,30,60,120)
 short_cases <- c("de","es","fr","it","uk","us")
@@ -16,7 +16,7 @@ if(!dir.exists("processed_data/tracking/figure1/")){
 
 for(i in seq_along(fl)){
   cat(countries[i],sep="\n")
-  dt <- fread(fl[i])
+  dt <- fread(paste0("processed_data/tracking/",fl[i]))
   tst1 <- dt[,.(news_vis=sum(type!="")),by=.(panelist_id)]
   val1 <- sum(tst1$news_vis!=0)/nrow(tst1)
   
@@ -27,10 +27,7 @@ for(i in seq_along(fl)){
   val3 <- sum(tst1$news_vis!=0)/nrow(tst1)
   dat1 <- data.frame(type=c("news","non_news"),value=c(sum(dt[["type"]]!="")/nrow(dt),sum(dt[["type"]]=="")/nrow(dt)))
   
-  
-  
-  
-  dat2 <- data.frame(type=c("News in general","Non-political news","Political news"),
+  dat2 <- data.frame(type=c("News in general","Non-political news","political news"),
                      value=c(val1,val2,val3)) 
   
   
@@ -40,11 +37,107 @@ for(i in seq_along(fl)){
   
   dat3$ypos <- cumsum(dat3$value)- 0.5*dat3$value 
   
-  saveRDS(list(dat1,dat2,dat3),paste0("processed_data/tracking/figure1/",countries_short[i],".RDS"))
+  saveRDS(list(dat1,dat2,dat3),paste0("processed_data/tracking/figure1/",short_cases[i],".RDS"))
 }
 
+vis_cnt_lst <- map(seq_along(fl),function(i){
+  res_visitors <- res_visits <- data.table(cutoff=cutoffs,
+                                           non_pol=numeric(length(cutoffs)),
+                                           pol=numeric(length(cutoffs)))
+  df <- fread(paste0("processed_data/tracking/news_only/",fl[i]))
+  n1 <- length(unique(df[["panelist_id"]][df[["political"]]=="political"]))
+  n2 <- length(unique(df[["panelist_id"]]))
+  fracs <- sapply(cutoffs,function(x){
+    tmp1 <- length(unique(df[duration>=x & political=="political"][["panelist_id"]]))/n1
+    tmp2 <- length(unique(df[duration>=x][["panelist_id"]]))/n2
+    c(tmp1,tmp2)
+  })
+  res_visitors$pol <-  fracs[1,]
+  res_visitors$non_pol <-  fracs[2,] 
+  
+  totals <- sapply(cutoffs,function(x){
+    df[duration>=x,.(count=.N),by=.(political)][["count"]]
+  })
+  #wtf is wrong with the UK???
+  # if(i==5){
+  #   totals[1:2,1:2] <- totals[2:1,2:1]
+  # }
+  
+  res_visits$non_pol <- totals[1,]/colSums(totals)
+  res_visits$pol <- totals[2,]/colSums(totals)
+  list(visits = res_visits,visitors = res_visitors)
+})
+saveRDS(vis_cnt_lst,"processed_data/tracking/figure1/vis_counts.RDS")
 
+# Figure1 for paper ----
+fl1 <- paste0("processed_data/tracking/figure1/",short_cases,".RDS")
 
+plt_tbl1 <- map_dfr(seq_along(fl1),function(x){
+  lst <- readRDS(fl1[x])
+  lst[[2]]$panel <- "News domain visitors"
+  lst[[3]]$panel <- "Visits of news articles"
+  lst[[2]]$case <- long_cases[x]
+  lst[[3]]$case <- long_cases[x]
+  lst[[2]]$type <- str_to_lower(lst[[2]]$type)
+  lst[[3]]$type <- str_to_lower(lst[[3]]$type)
+  bind_rows(lst[[2]][-1,],lst[[3]][,-3])
+})
+
+vis_cnt_lst <- readRDS("processed_data/tracking/figure1/vis_counts.RDS")
+plt_tbl2 <- map_dfr(seq_along(vis_cnt_lst),function(x){
+  vis_cnt_lst[[x]][[1]]$case <- vis_cnt_lst[[x]][[2]]$case <- long_cases[x]
+  vis_cnt_lst[[x]][[1]]$level <- "Proportion of news article visits"
+  vis_cnt_lst[[x]][[2]]$level <- "Proportion of news domain visitors"
+  bind_rows(vis_cnt_lst[[x]])
+}) |> 
+  pivot_longer(cols = c(non_pol,pol)) |> 
+  mutate(name = ifelse(name=="pol","political news","non-political news"))
+
+# TODO: fix UK
+plt_tbl2$value[plt_tbl2$case=="United Kingdom" & 
+               plt_tbl2$cutoff==3 & 
+               plt_tbl2$level=="Proportion of news article visits"] <- 
+  rev(plt_tbl2$value[plt_tbl2$case=="United Kingdom" & 
+                       plt_tbl2$cutoff==3 & 
+                       plt_tbl2$level=="Proportion of news article visits"])
+
+p1 <- ggplot(plt_tbl1,aes(x=type,y=value,fill = type))+
+  geom_col()+
+  scale_fill_manual(values=c("political news" = "#AA8939","non-political news" = "#303C74"),
+                    labels=c("political news","non-political news"),name="")+
+  facet_grid(panel~case)+
+  theme_bw()+
+  theme(legend.position = "bottom",
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(family="sans", size = 20),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(), 
+        strip.text = element_text(face = "bold"),
+        text = element_text(family="sans", size=16))+
+  scale_y_continuous(labels = scales::label_percent())+
+  labs(x="",y="")
+
+p2 <- ggplot(plt_tbl2,aes(x=as.factor(cutoff),y=value,color=name)) + 
+  geom_point(position = position_dodge(0.6))+
+  geom_hline(yintercept = 0, linetype = "dashed",color="transparent")+
+  scale_color_manual(values=c("political news" = "#AA8939","non-political news" = "#303C74"),
+                     labels=c("political news","non-political news"),name="")+
+  facet_grid(level~case,scales = "free_y") +
+  theme_bw()+
+  theme(legend.position = "none",
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(family="sans", size = 20),
+        axis.text.x = element_text(family="sans", size = 12,angle = 45,vjust=1),
+        strip.text = element_text(face = "bold"),
+        text = element_text(family="sans", size=16))+
+  labs(x = "cutoff (in sec)",y = "")+
+  scale_y_continuous(labels = scales::label_percent())
+  # guides(fill = guide_legend(override.aes = list(size=3)))
+
+p <- p1 + p2
+
+ggsave("figures/figure1.pdf",width=18,height=8)
+ 
 ##----------------------------------------------------------------------------##
 # Comparison pol/nonpol ----
 ##----------------------------------------------------------------------------##
