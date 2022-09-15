@@ -537,8 +537,6 @@ tidy_toplot_access_inter <- tidy_toplot_access_inter |>
          term = str_replace(term,"as.factor\\(leftright\\)1:prev_type","\\(B\\) Access: ") |> str_to_title())
 
 ## Political Interest (Moderation Analysis) ----
-
-
 non_pol <- map_dfr(cutoffs,function(x){
   dat <- lm_dt[political=="non-political" & duration >= x]
   dat[,align := mean(leftright,na.rm = TRUE)-ideo_over,by=c("country","domain")]
@@ -565,9 +563,14 @@ to_keep <- "as.factor(leftright)1:as.factor(polinterest)-1"
 
 tidy_toplot_interest_inter <- tidy_toplot_interest_inter |> 
   dplyr::filter(term%in%to_keep) |> 
-  mutate(header = "(C) Political Interest \n(Reference: High Political Interest)",
+  mutate(header = "(C) Political Interest \n(Reference: Low Political Interest)",
          term = str_replace(term,"as.factor\\(leftright\\)1:as.factor\\(polinterest\\)-1",
-                            "\\(C\\) Political Interest: Low"))
+                            "\\(C\\) Political Interest: High"))
+
+# Change order 
+# TODO: check that this really switches ref point from high to low
+tidy_toplot_interest_inter <- tidy_toplot_interest_inter |> 
+  mutate(Estimate = -1 * Estimate,CI_lower = -1 * CI_lower, CI_upper = -1 * CI_upper)
 
 ## Extremity (Moderation Analysis) ----
 # (This part of the analyses produces error messages; these can be ignored. They simply reflect that 
@@ -655,9 +658,14 @@ to_keep <- c("as.factor(leftright)1:female")
 
 tidy_toplot_gender_inter <- tidy_toplot_gender_inter |> 
   dplyr::filter(term%in%to_keep) |> 
-  mutate(header = "(F) Gender \n(Reference: Male)",
+  mutate(header = "(F) Gender \n(Reference: Female)",
          term = str_replace(term,"as.factor\\(leftright\\)1:female",
-                            "\\(F\\) Gender: Female"))
+                            "\\(F\\) Gender: Male"))
+
+# Change order 
+# TODO: check that this really switches ref point from male to female
+tidy_toplot_gender_inter <- tidy_toplot_gender_inter |> 
+  mutate(Estimate = -1 * Estimate,CI_lower = -1 * CI_lower, CI_upper = -1 * CI_upper)
 
 # Education (Moderation Analysis) ----
 non_pol <- map_dfr(cutoffs,function(x){
