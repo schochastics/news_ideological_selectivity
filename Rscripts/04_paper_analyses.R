@@ -1019,9 +1019,9 @@ tidy_toplot_edu <- bind_rows(non_pol,pol) |>
                                       "3" = "(G) Education: High"))
 
 # Build single concise plot
-tidy_toplot_integrated <- rbind(tidy_toplot_country, tidy_toplot_access, tidy_toplot_interest, tidy_toplot_extreme,
-                                tidy_toplot_age, tidy_toplot_female, tidy_toplot_edu) # I did not label consistently. deviates from yesterday. sorry!
-
+tidy_toplot_integrated <- bind_rows(tidy_toplot_country, tidy_toplot_access, 
+                                    tidy_toplot_interest, tidy_toplot_extreme,
+                                    tidy_toplot_age, tidy_toplot_female, tidy_toplot_edu)
 
 level_order <- rev(levels(tidy_toplot_integrated$header))
 tidy_toplot_integrated <- tidy_toplot_integrated  %>% 
@@ -1030,7 +1030,8 @@ tidy_toplot_integrated <- tidy_toplot_integrated  %>%
                                      "non-political" = "Non-Political News",
                                      "political" = "Political News"))
 
-plot_slant_conditional_integrated <- tidy_toplot_integrated %>% ggplot(aes(y = Estimate, x = factor(threshold))) +
+tidy_toplot_integrated |> 
+  ggplot(aes(y = Estimate, x = factor(threshold))) +
   geom_pointrange(
     aes(ymin = CI_lower, ymax = CI_upper, color = level), size=0.32,
     position = position_dodge2(w = 0.4)) +
@@ -1040,9 +1041,8 @@ plot_slant_conditional_integrated <- tidy_toplot_integrated %>% ggplot(aes(y = E
   theme(axis.text = element_text(size = 10),
         legend.position = "bottom",
         legend.title = element_blank()) +
-  labs(title="Figure 3 \nMultilevel Estimates of Macro- and Micro-Level Heterogeneities of Ideological Divergence in News Media Diet Slant") +
+  # labs(title="Figure 3 \nMultilevel Estimates of Macro- and Micro-Level Heterogeneities of Ideological Divergence in News Media Diet Slant") +
   geom_hline(yintercept = 0, linetype = "dashed")
-print(plot_slant_conditional_integrated)
-ggsave(plot_slant_conditional_integrated, file = "C:/Projekte/Networks/tests favorability etc/Infrastructure/Descriptives/Final/Figure3_endlich_new_pipe.png", width = 15, height = 11)
+ggsave("figures/Figure3_endlich_new_pipe.png", width = 15, height = 11)
 
-write.csv(tidy_toplot_integrated, "conditional_effects.csv")
+# write.csv(tidy_toplot_integrated, "conditional_effects.csv")
