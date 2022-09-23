@@ -433,7 +433,7 @@ ggplot(res_tbl,aes(x=as.factor(cutoff),y=score,color = news_type)) +
 ggsave("figures/figure2.pdf",width=16,height=10)
 
 
-# Regressions -----
+# Prepare Regression Data ----
 # some helper function to get the regression estimates into the graphs
 lmer_to_tidy <- function(res) {
   res <- summary(res) |> coef() |> as_tibble(rownames = "term")
@@ -476,6 +476,7 @@ lm_dt[,ideo_over:=mean(leftright,na.rm=TRUE),by=country]
 # Although We do not plot the respective coefficients, We additionally control for logged(total visits), as
 # is common with most previous research 
 
+# Regressions I-----
 ## Countries (Moderation Analysis) ----
 non_pol <- map_dfr(cutoffs,function(x){
   dat <- lm_dt[political=="non-political" & duration >= x]
@@ -667,7 +668,7 @@ tidy_toplot_gender_inter <- tidy_toplot_gender_inter |>
 tidy_toplot_gender_inter <- tidy_toplot_gender_inter |> 
   mutate(Estimate = -1 * Estimate,CI_lower = -1 * CI_lower, CI_upper = -1 * CI_upper)
 
-# Education (Moderation Analysis) ----
+## Education (Moderation Analysis) ----
 non_pol <- map_dfr(cutoffs,function(x){
   dat <- lm_dt[political=="non-political" & duration >= x]
   dat[,align := mean(leftright,na.rm = TRUE)-ideo_over,by=c("country","domain")]
@@ -738,3 +739,310 @@ tidy_toplot_integrated  |>
   guides(color = guide_legend(override.aes = list(size=0.75)))
 
 ggsave("figures/figure_SM3_2.pdf", width = 15, height = 7)
+
+# Regressions II-----
+## Country (Conditional Effects) ----
+non_pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="non-political" & duration >= x]
+  dat[,align := mean(leftright,na.rm = TRUE)-ideo_over,by=c("country","domain")]
+  map_dfr(long_cases,function(ref){
+    dat[country==ref][["country"]] <- "A_reference"
+    res <- lmer(align ~ 1  + as.factor(leftright) + extreme + 
+                country:as.factor(leftright) + country + prev_type + as.factor(polinterest) + age + 
+                female + as.factor(edu) + log_total_visits + (1|panelist_id), data = dat)
+    lmer_to_tidy(res) |> mutate(type = "non_political", threshold = x,level = ref) |> 
+      dplyr::filter(term == "as.factor(leftright)1")
+  })
+})
+
+pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="political" & duration >= x]
+  dat[,align := mean(leftright,na.rm = TRUE)-ideo_over,by=c("country","domain")]
+  map_dfr(long_cases,function(ref){
+    dat[country==ref][["country"]] <- "A_reference"
+    res <- lmer(align ~ 1  + as.factor(leftright) + extreme + 
+                  country:as.factor(leftright) + country + prev_type + as.factor(polinterest) + age + 
+                  female + as.factor(edu) + log_total_visits + (1|panelist_id), data = dat)
+    lmer_to_tidy(res) |> mutate(type = "political", threshold = x,level = ref) |> 
+      dplyr::filter(term == "as.factor(leftright)1")
+  })
+})
+
+tidy_toplot_country <- bind_rows(non_pol,pol) %>% 
+  mutate(header = "(A) Country",
+         level = as.factor(level),
+         level = dplyr::recode_factor(level,
+                                      "France" = "(A) Country: France",
+                                      "Germany" = "(A) Country: Germany",
+                                      "Italy" = "(A) Country: Italy",
+                                      "Spain" = "(A) Country: Spain",
+                                      "UK" = "(A) Country: UK",
+                                      "USA" = "(A) Country: USA"))
+
+
+## Access (Conditional Effects Analysis)----
+reference <- c("direct", "facebook", "twitter", "search", "portal") 
+lm_dt$prev_type <- as.character(lm_dt$prev_type)
+
+non_pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="non-political" & duration >= x]
+  dat[,align := mean(leftright,na.rm = TRUE)-ideo_over,by=c("country","domain")]
+  map_dfr(reference,function(ref){
+    dat[prev_type==ref][["prev_type"]] <- "A_reference"
+    res <- lmer(align ~ 1  + as.factor(leftright) + extreme + 
+                  prev_type:as.factor(leftright) + country + prev_type + as.factor(polinterest) + age + 
+                  female + as.factor(edu) + log_total_visits + (1|panelist_id), data = dat) 
+    lmer_to_tidy(res) |> 
+      mutate(type = "non_political", threshold = x,level = ref) |> 
+      dplyr::filter(term == "as.factor(leftright)1")
+  })
+})
+
+pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="political" & duration >= x]
+  dat[,align := mean(leftright,na.rm = TRUE)-ideo_over,by=c("country","domain")]
+  map_dfr(reference,function(ref){
+    dat[prev_type==ref][["prev_type"]] <- "A_reference"
+    res <- lmer(align ~ 1  + as.factor(leftright) + extreme + 
+                  prev_type:as.factor(leftright) + country + prev_type + as.factor(polinterest) + age + 
+                  female + as.factor(edu) + log_total_visits + (1|panelist_id), data = dat) 
+    lmer_to_tidy(res) |> 
+      mutate(type = "political", threshold = x,level = ref) |> 
+      dplyr::filter(term == "as.factor(leftright)1")
+  })
+})
+
+tidy_toplot_access <- bind_rows(non_pol,pol) %>% 
+  mutate(header = "(B) Access",
+         level = as.factor(level),
+         level = dplyr::recode_factor(level,
+                                      "direct" = "(B) Access: Direct",
+                                      "facebook" = "(B) Access: Facebook",
+                                      "twitter" = "(B) Access: Twitter",
+                                      "search" = "(B) Access: Search engines",
+                                      "portal" = "(B) Access: Portals"))
+
+## Political interest (Conditional Effects Analysis) ----
+reference <- c("1", "4")
+
+non_pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="non-political" & duration >= x]
+  dat[,align := mean(leftright,na.rm = TRUE)-ideo_over,by=c("country","domain")]
+  map_dfr(reference,function(ref){
+    dat[polinterest==ref][["polinterest"]] <- 0
+    res <- lmer(align ~ 1  + as.factor(leftright) + extreme + 
+                  as.factor(polinterest):as.factor(leftright) + country + prev_type + as.factor(polinterest) + age + 
+                  female + as.factor(edu) + log_total_visits + (1|panelist_id), data = dat) 
+    lmer_to_tidy(res) |> 
+      mutate(type = "non_political", threshold = x,level = ref) |> 
+      dplyr::filter(term == "as.factor(leftright)1")
+  })
+})
+
+pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="political" & duration >= x]
+  dat[,align := mean(leftright,na.rm = TRUE)-ideo_over,by=c("country","domain")]
+  map_dfr(reference,function(ref){
+    dat[polinterest==ref][["polinterest"]] <- 0
+    res <- lmer(align ~ 1  + as.factor(leftright) + extreme + 
+                  as.factor(polinterest):as.factor(leftright) + country + prev_type + as.factor(polinterest) + age + 
+                  female + as.factor(edu) + log_total_visits + (1|panelist_id), data = dat) 
+    lmer_to_tidy(res) |> 
+      mutate(type = "political", threshold = x,level = ref) |> 
+      dplyr::filter(term == "as.factor(leftright)1")
+  })
+})
+
+tidy_toplot_interest <- bind_rows(non_pol,pol) |> 
+  mutate(header = "(C) Political Interest",
+         level = as.factor(level),
+         level = dplyr::recode_factor(level,
+                                      "1" = "(C) Political Interest: Low",
+                                      "4" = "(C) Political Interest: High"))
+
+## Extremity(Conditional Effects Analysis) ----
+# because We treat extremity as a continuous moderator, this requires a little bit different coding
+# We use .2 as a reference level, because zero does not make so much sense (because it corresponds to a centrist ideology)
+reference <- c(".2", "1") 
+
+non_pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="non-political" & duration >= x]
+  dat[,align := mean(leftright,na.rm = TRUE)-ideo_over,by=c("country","domain")]
+  map_dfr(reference,function(ref){
+    dat[["extreme"]] <- dat[["extreme"]] - as.numeric(ref)
+    res <- lmer(align ~ 1  + as.factor(leftright) + extreme + 
+                  extreme:as.factor(leftright) + country + prev_type + as.factor(polinterest) + age + 
+                  female + as.factor(edu) + log_total_visits + (1|panelist_id), data = dat) 
+    lmer_to_tidy(res) |> 
+      mutate(type = "non_political", threshold = x,level = ref) |> 
+      dplyr::filter(term == "as.factor(leftright)1")
+  })
+})
+
+pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="political" & duration >= x]
+  dat[,align := mean(leftright,na.rm = TRUE)-ideo_over,by=c("country","domain")]
+  map_dfr(reference,function(ref){
+    dat[["extreme"]] <- dat[["extreme"]] - as.numeric(ref)
+    res <- lmer(align ~ 1  + as.factor(leftright) + extreme + 
+                  extreme:as.factor(leftright) + country + prev_type + as.factor(polinterest) + age + 
+                  female + as.factor(edu) + log_total_visits + (1|panelist_id), data = dat) 
+    lmer_to_tidy(res) |> 
+      mutate(type = "non_political", threshold = x,level = ref) |> 
+      dplyr::filter(term == "as.factor(leftright)1")
+  })
+})
+
+
+tidy_toplot_extreme <- bind_rows(non_pol,pol) |> 
+  mutate(header = "(D) Political Extremity",
+         level = as.factor(level),
+         level = dplyr::recode_factor(level,
+                                      ".2" = "(D) Political Extremity: Low",
+                                      "1" = "(D) Political Extremity: High"))
+
+## Generation (Conditional Effects Analysis) ----
+tidy_toplot <- data.frame()
+reference <- c("30", "60") #TODO: 65?
+
+non_pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="non-political" & duration >= x]
+  dat[,align := mean(leftright,na.rm = TRUE)-ideo_over,by=c("country","domain")]
+  map_dfr(reference,function(ref){
+    dat[["age"]] <- dat[["age"]] - as.numeric(ref)
+    res <- lmer(align ~ 1  + as.factor(leftright) + extreme + 
+                  age:as.factor(leftright) + country + prev_type + as.factor(polinterest) + age + 
+                  female + as.factor(edu) + log_total_visits + (1|panelist_id), data = dat) 
+    lmer_to_tidy(res) |> 
+      mutate(type = "non_political", threshold = x,level = ref) |> 
+      dplyr::filter(term == "as.factor(leftright)1")
+  })
+})
+
+pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="political" & duration >= x]
+  dat[,align := mean(leftright,na.rm = TRUE)-ideo_over,by=c("country","domain")]
+  map_dfr(reference,function(ref){
+    dat[["age"]] <- dat[["age"]] - as.numeric(ref)
+    res <- lmer(align ~ 1  + as.factor(leftright) + extreme + 
+                  age:as.factor(leftright) + country + prev_type + as.factor(polinterest) + age + 
+                  female + as.factor(edu) + log_total_visits + (1|panelist_id), data = dat) 
+    lmer_to_tidy(res) |> 
+      mutate(type = "non_political", threshold = x,level = ref) |> 
+      dplyr::filter(term == "as.factor(leftright)1")
+  })
+})
+
+tidy_toplot_age <- bind_rows(non_pol,pol)|> 
+  mutate(header = "(E) Generation",
+         level = as.factor(level),
+         level = dplyr::recode_factor(level,
+                                      "30" = "(E) Generation: Millennial",
+                                      "60" = "(E) Generation: Boomer"))
+
+# Gender (Conditional Effects Analysis) ----
+reference <- c("0", "1")
+
+non_pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="non-political" & duration >= x]
+  dat[,align := mean(leftright,na.rm = TRUE)-ideo_over,by=c("country","domain")]
+  map_dfr(reference,function(ref){
+    dat[["female"]] <- dat[["female"]] - as.numeric(ref)
+    res <- lmer(align ~ 1  + as.factor(leftright) + extreme + 
+                  female:as.factor(leftright) + country + prev_type + as.factor(polinterest) + age + 
+                  female + as.factor(edu) + log_total_visits + (1|panelist_id), data = dat) 
+    lmer_to_tidy(res) |> 
+      mutate(type = "non_political", threshold = x,level = ref) |> 
+      dplyr::filter(term == "as.factor(leftright)1")
+  })
+})
+
+pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="political" & duration >= x]
+  dat[,align := mean(leftright,na.rm = TRUE)-ideo_over,by=c("country","domain")]
+  map_dfr(reference,function(ref){
+    dat[["female"]] <- dat[["female"]] - as.numeric(ref)
+    res <- lmer(align ~ 1  + as.factor(leftright) + extreme + 
+                  female:as.factor(leftright) + country + prev_type + as.factor(polinterest) + age + 
+                  female + as.factor(edu) + log_total_visits + (1|panelist_id), data = dat) 
+    lmer_to_tidy(res) |> 
+      mutate(type = "non_political", threshold = x,level = ref) |> 
+      dplyr::filter(term == "as.factor(leftright)1")
+  })
+})
+
+
+tidy_toplot_female <- bind_rows(non_pol,pol) |> 
+  mutate(header = "(F) Gender",
+         level = as.factor(level),
+         level = dplyr::recode_factor(level,
+                                      "0" = "(F) Gender: Male",
+                                      "1" = "(F) Gender: Female"))
+
+# Education (Conditional Effects Analysis) ----
+reference <- c("1", "3")
+
+non_pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="non-political" & duration >= x]
+  dat[,align := mean(leftright,na.rm = TRUE)-ideo_over,by=c("country","domain")]
+  map_dfr(reference,function(ref){
+    dat[edu==ref][["edu"]] <- 0
+    res <- lmer(align ~ 1  + as.factor(leftright) + extreme + 
+                  as.factor(edu):as.factor(leftright) + country + prev_type + as.factor(polinterest) + age + 
+                  female + as.factor(edu) + log_total_visits + (1|panelist_id), data = dat) 
+    lmer_to_tidy(res) |> 
+      mutate(type = "non_political", threshold = x,level = ref) |> 
+      dplyr::filter(term == "as.factor(leftright)1")
+  })
+})
+
+pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="political" & duration >= x]
+  dat[,align := mean(leftright,na.rm = TRUE)-ideo_over,by=c("country","domain")]
+  map_dfr(reference,function(ref){
+    dat[edu==ref][["edu"]] <- 0
+    res <- lmer(align ~ 1  + as.factor(leftright) + extreme + 
+                  as.factor(edu):as.factor(leftright) + country + prev_type + as.factor(polinterest) + age + 
+                  female + as.factor(edu) + log_total_visits + (1|panelist_id), data = dat) 
+    lmer_to_tidy(res) |> 
+      mutate(type = "non_political", threshold = x,level = ref) |> 
+      dplyr::filter(term == "as.factor(leftright)1")
+  })
+})
+
+
+tidy_toplot_edu <- bind_rows(non_pol,pol) |> 
+  mutate(header = "(G) Education",
+         level = as.factor(level),
+         level = dplyr::recode_factor(level,
+                                      "1" = "(G) Education: Low",
+                                      "3" = "(G) Education: High"))
+
+# Build single concise plot
+tidy_toplot_integrated <- rbind(tidy_toplot_country, tidy_toplot_access, tidy_toplot_interest, tidy_toplot_extreme,
+                                tidy_toplot_age, tidy_toplot_female, tidy_toplot_edu) # I did not label consistently. deviates from yesterday. sorry!
+
+
+level_order <- rev(levels(tidy_toplot_integrated$header))
+tidy_toplot_integrated <- tidy_toplot_integrated  %>% 
+  mutate(type = as.factor(type),
+         type = dplyr::recode_factor(type,
+                                     "non-political" = "Non-Political News",
+                                     "political" = "Political News"))
+
+plot_slant_conditional_integrated <- tidy_toplot_integrated %>% ggplot(aes(y = Estimate, x = factor(threshold))) +
+  geom_pointrange(
+    aes(ymin = CI_lower, ymax = CI_upper, color = level), size=0.32,
+    position = position_dodge2(w = 0.4)) +
+  coord_flip() +
+  theme_bw() + 
+  facet_grid(type~header, scales = "free_x") +
+  theme(axis.text = element_text(size = 10),
+        legend.position = "bottom",
+        legend.title = element_blank()) +
+  labs(title="Figure 3 \nMultilevel Estimates of Macro- and Micro-Level Heterogeneities of Ideological Divergence in News Media Diet Slant") +
+  geom_hline(yintercept = 0, linetype = "dashed")
+print(plot_slant_conditional_integrated)
+ggsave(plot_slant_conditional_integrated, file = "C:/Projekte/Networks/tests favorability etc/Infrastructure/Descriptives/Final/Figure3_endlich_new_pipe.png", width = 15, height = 11)
+
+write.csv(tidy_toplot_integrated, "conditional_effects.csv")
