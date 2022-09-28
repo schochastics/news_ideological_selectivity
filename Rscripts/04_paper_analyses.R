@@ -776,7 +776,7 @@ tidy_toplot_country <- bind_rows(non_pol,pol) %>%
                                       "Germany" = "(A) Country: Germany",
                                       "Italy" = "(A) Country: Italy",
                                       "Spain" = "(A) Country: Spain",
-                                      "UK" = "(A) Country: UK",
+                                      "United Kingdom" = "(A) Country: United Kingdom",
                                       "USA" = "(A) Country: USA"))
 
 
@@ -824,6 +824,7 @@ tidy_toplot_access <- bind_rows(non_pol,pol) %>%
 
 ## Political interest (Conditional Effects Analysis) ----
 reference <- c("1", "4")
+lm_dt$polinterest <- -1*lm_dt$polinterest
 
 non_pol <- map_dfr(cutoffs,function(x){
   dat <- lm_dt[political=="non-political" & duration >= x]
@@ -888,7 +889,7 @@ pol <- map_dfr(cutoffs,function(x){
                   extreme:as.factor(leftright) + country + prev_type + as.factor(polinterest) + age + 
                   female + as.factor(edu) + log_total_visits + (1|panelist_id), data = dat) 
     lmer_to_tidy(res) |> 
-      mutate(type = "non_political", threshold = x,level = ref) |> 
+      mutate(type = "political", threshold = x,level = ref) |> 
       dplyr::filter(term == "as.factor(leftright)1")
   })
 })
@@ -904,6 +905,7 @@ tidy_toplot_extreme <- bind_rows(non_pol,pol) |>
 ## Generation (Conditional Effects Analysis) ----
 tidy_toplot <- data.frame()
 reference <- c("30", "60") #TODO: 65?
+lm_dt[, age := age*35+30] #undo recode from before
 
 non_pol <- map_dfr(cutoffs,function(x){
   dat <- lm_dt[political=="non-political" & duration >= x]
@@ -928,7 +930,7 @@ pol <- map_dfr(cutoffs,function(x){
                   age:as.factor(leftright) + country + prev_type + as.factor(polinterest) + age + 
                   female + as.factor(edu) + log_total_visits + (1|panelist_id), data = dat) 
     lmer_to_tidy(res) |> 
-      mutate(type = "non_political", threshold = x,level = ref) |> 
+      mutate(type = "political", threshold = x,level = ref) |> 
       dplyr::filter(term == "as.factor(leftright)1")
   })
 })
@@ -940,7 +942,7 @@ tidy_toplot_age <- bind_rows(non_pol,pol)|>
                                       "30" = "(E) Generation: Millennial",
                                       "60" = "(E) Generation: Boomer"))
 
-# Gender (Conditional Effects Analysis) ----
+## Gender (Conditional Effects Analysis) ----
 reference <- c("0", "1")
 
 non_pol <- map_dfr(cutoffs,function(x){
@@ -966,7 +968,7 @@ pol <- map_dfr(cutoffs,function(x){
                   female:as.factor(leftright) + country + prev_type + as.factor(polinterest) + age + 
                   female + as.factor(edu) + log_total_visits + (1|panelist_id), data = dat) 
     lmer_to_tidy(res) |> 
-      mutate(type = "non_political", threshold = x,level = ref) |> 
+      mutate(type = "political", threshold = x,level = ref) |> 
       dplyr::filter(term == "as.factor(leftright)1")
   })
 })
@@ -979,7 +981,7 @@ tidy_toplot_female <- bind_rows(non_pol,pol) |>
                                       "0" = "(F) Gender: Male",
                                       "1" = "(F) Gender: Female"))
 
-# Education (Conditional Effects Analysis) ----
+## Education (Conditional Effects Analysis) ----
 reference <- c("1", "3")
 
 non_pol <- map_dfr(cutoffs,function(x){
@@ -1005,7 +1007,7 @@ pol <- map_dfr(cutoffs,function(x){
                   as.factor(edu):as.factor(leftright) + country + prev_type + as.factor(polinterest) + age + 
                   female + as.factor(edu) + log_total_visits + (1|panelist_id), data = dat) 
     lmer_to_tidy(res) |> 
-      mutate(type = "non_political", threshold = x,level = ref) |> 
+      mutate(type = "political", threshold = x,level = ref) |> 
       dplyr::filter(term == "as.factor(leftright)1")
   })
 })
@@ -1018,6 +1020,7 @@ tidy_toplot_edu <- bind_rows(non_pol,pol) |>
                                       "1" = "(G) Education: Low",
                                       "3" = "(G) Education: High"))
 
+## plotting ----
 # Build single concise plot
 tidy_toplot_integrated <- bind_rows(tidy_toplot_country, tidy_toplot_access, 
                                     tidy_toplot_interest, tidy_toplot_extreme,
@@ -1027,22 +1030,36 @@ level_order <- rev(levels(tidy_toplot_integrated$header))
 tidy_toplot_integrated <- tidy_toplot_integrated  %>% 
   mutate(type = as.factor(type),
          type = dplyr::recode_factor(type,
-                                     "non-political" = "Non-Political News",
+                                     "non_political" = "Non-Political News",
                                      "political" = "Political News"))
+
+write_csv(tidy_toplot_integrated, "processed_data/conditional_effects.csv")
 
 tidy_toplot_integrated |> 
   ggplot(aes(y = Estimate, x = factor(threshold))) +
   geom_pointrange(
-    aes(ymin = CI_lower, ymax = CI_upper, color = level), size=0.32,
+    aes(ymin = CI_lower, ymax = CI_upper, color = level,shape=level), size=0.32,
     position = position_dodge2(w = 0.4)) +
   coord_flip() +
   theme_bw() + 
+  theme_bw() + 
+  scale_color_manual(values = c(
+    "#E69F00", "#009E73", "#0072B2", "#D55E00", "#CC79A7",
+    "#E69F00", "#009E73", "#0072B2", "#D55E00",
+    "#E69F00", "#009E73","#E69F00", "#009E73","#E69F00", "#009E73",
+    "#E69F00", "#009E73","#E69F00", "#009E73","#E69F00", "#009E73"
+  ),name = "")+
+  scale_shape_manual(values = c(
+    15,15,15,15,15,
+    16,16,16,16,
+    17,17,7,7,8,8,9,9,10,10,11,11
+  ), name = "")+
   facet_grid(type~header, scales = "free_x") +
   theme(axis.text = element_text(size = 10),
         legend.position = "bottom",
         legend.title = element_blank()) +
-  # labs(title="Figure 3 \nMultilevel Estimates of Macro- and Micro-Level Heterogeneities of Ideological Divergence in News Media Diet Slant") +
+  labs(y = "cutoff (in sec)") +
   geom_hline(yintercept = 0, linetype = "dashed")
-ggsave("figures/Figure3_endlich_new_pipe.png", width = 15, height = 11)
+ggsave("figures/figure3_conditional.pdf", width = 15, height = 7)
 
-# write.csv(tidy_toplot_integrated, "conditional_effects.csv")
+
