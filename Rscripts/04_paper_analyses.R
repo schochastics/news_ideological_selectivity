@@ -17,7 +17,7 @@ if(!dir.exists("processed_data/tracking/figure1/")){
 }
 
 for(i in seq_along(fl)){
-  cat(countries[i],sep="\n")
+  cat(long_cases[i],sep="\n")
   dt <- fread(paste0("processed_data/tracking/",fl[i]))
   tst1 <- dt[,.(news_vis=sum(type!="")),by=.(panelist_id)]
   val1 <- sum(tst1$news_vis!=0)/nrow(tst1)
