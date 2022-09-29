@@ -105,16 +105,19 @@ for (i in 1:6) {
   cat("-loaded\n")
   urls_final <- as.data.table(urls_final_mobile)
   rm(urls_final_mobile)
-  urls_final <- urls_final[, c("panel", "panelist_id", "url", "domain", "duration", "used_at")]
+  urls_final <- urls_final[, c("panel", "panelist_id", "url", "domain", "duration", "used_at","app_name")]
   urls_final[, timestamp := used_at]
   urls_final[, used_at := NULL]
+  urls_final[,app:=fifelse(!is.na(app_name),TRUE,FALSE)]
+  urls_final[,domain:=fifelse(is.na(app_name),domain,app_name)] #TODO: does this make sense?
+  urls_final[,url:=fifelse(is.na(app_name),url,app_name)] #TODO: does this make sense?
   setorder(urls_final, panelist_id, timestamp)
   
   urls_final[, visit := cumsum(url != shift(url, n = 1, type = "lag", fill = 0)), by = .(panelist_id)]
   urls_final[, day := as.Date(timestamp)]
   # setkey(urls_final,panelist_id, visit, url, domain, day)
   dt1 <- suppressWarnings(urls_final[, .(visits = .N, duration = sum(as.numeric(duration), na.rm = TRUE)),
-                                     by = .(panelist_id, visit, url, domain, day)
+                                     by = .(panelist_id, visit, url, domain, day,app)
   ])
   cat("-done summarize\n")
   dt1 <- dt1[!is.na(duration)]
