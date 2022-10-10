@@ -1,3 +1,7 @@
+# TODO: dissim/atkins..
+# TODO: Entropy
+# TODO: Bakshy
+# TODO: descriptive patterns (scores of other peeps)
 # packages ----
 library(tidyverse)
 library(data.table)
