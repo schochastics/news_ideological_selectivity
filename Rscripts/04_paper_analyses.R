@@ -1,7 +1,9 @@
-# TODO: dissim/atkins..
-# TODO: Entropy
-# TODO: Bakshy
-# TODO: descriptive patterns (scores of other peeps)
+# TODO: dissim/atkins/isolation [x]
+# TODO: Entropy+Diversity [x]
+# TODO: network stats [x]
+# TODO: Bakshy [ ]
+# TODO: descriptive patterns (scores of other peeps) [ ]
+# TODO: Rerun with mobile + desktop [ ]
 # packages ----
 library(tidyverse)
 library(data.table)
@@ -359,7 +361,8 @@ pol <- lapply(cutoffs,function(y) {
 
 combine_results(non_pol,pol) |> saveRDS("processed_data/news_diet_slant.RDS")
 
-# Simpson Diversity ----
+# Diversity measures ----
+## Simpson Diversity ----
 non_pol <- lapply(cutoffs,function(y) {
   sapply(fl,function(x){
     dt <- data.table::fread(paste0("processed_data/tracking/news_only/",x))
@@ -409,6 +412,54 @@ pol <- lapply(cutoffs,function(y) {
 })
 
 combine_results(non_pol,pol) |> saveRDS("processed_data/simpson_diversity.RDS")
+
+## Entropy ----
+non_pol <- lapply(cutoffs,function(y) {
+  sapply(fl,function(x){
+    dt <- data.table::fread(paste0("processed_data/tracking/news_only/",x))
+    if(fixN){
+      peeps <- dt[duration>=120]
+      peeps <- unique(peeps[["panelist_id"]])
+      dt <- dt[panelist_id%in%peeps]
+    }
+    dt[survey, on = .(panelist_id), leftright := leftright]
+    dt <- dt[!is.na(leftright)]
+    dt[,`:=`(leftright=fcase(leftright < 6,-1,leftright > 6,1,default = 0))]
+    mean_ideo <- mean(unique(dt[,.(panelist_id,leftright)])[["leftright"]])
+    
+    dt <- dt[political=="" & duration>=y]
+    
+    dom_align <- dt[,.(align=mean(leftright,na.rm=TRUE) - mean_ideo),by = .(domain)]
+    dom_align[, ideo_cat := fcase(align < -.2,-1, align > .2,1, default = 0)]
+    dt[dom_align, on = .(domain), lcr:= ideo_cat]
+    mean(dt[,.N,.(panelist_id,lcr)][,.(frac=N/sum(N)),.(panelist_id)][,.(Diversity=-sum(frac*log(frac))),.(panelist_id)][["Diversity"]]) 
+  })
+})
+
+pol <- lapply(cutoffs,function(y) {
+  sapply(fl,function(x){
+    dt <- data.table::fread(paste0("processed_data/tracking/news_only/",x))
+    if(fixN){
+      peeps <- dt[duration>=120]
+      peeps <- unique(peeps[["panelist_id"]])
+      dt <- dt[panelist_id%in%peeps]
+    }
+    dt[survey, on = .(panelist_id), leftright := leftright]
+    dt <- dt[!is.na(leftright)]
+    dt[,`:=`(leftright=fcase(leftright < 6,-1,leftright > 6,1,default = 0))]
+    mean_ideo <- mean(unique(dt[,.(panelist_id,leftright)])[["leftright"]])
+    
+    dt <- dt[political=="political" & duration>=y]
+    
+    dom_align <- dt[,.(align=mean(leftright,na.rm=TRUE) - mean_ideo),by = .(domain)]
+    dom_align[, ideo_cat := fcase(align < -.2,-1, align > .2,1, default = 0)]
+    dt[dom_align, on = .(domain), lcr:= ideo_cat]
+    mean(dt[,.N,.(panelist_id,lcr)][,.(frac=N/sum(N)),.(panelist_id)][,.(Diversity=-sum(frac*log(frac))),.(panelist_id)][["Diversity"]]) 
+  })
+})
+
+combine_results(non_pol,pol) |> saveRDS("processed_data/entropy.RDS")
+
 
 # Figure 2 for Paper----
 result_files <- c("segregation_scores.RDS","simpson_diversity.RDS","news_diet_slant.RDS")
@@ -1069,4 +1120,110 @@ tidy_toplot_integrated |>
 
 ggsave("figures/figure3_conditional.pdf", width = 15, height = 7)
 
+# Appendix ----
 
+## Seg score comparison ----
+bind_rows(
+  readRDS("processed_data/segregation_scores.RDS") |> mutate(type="isolation index"),
+  readRDS("processed_data/dissimilarity_scores.RDS") |> mutate(type="dissimilarity index"),
+  readRDS("processed_data/atkinson_scores.RDS") |> mutate(type="Atkinson scores")
+) |> 
+  pivot_longer(cols = c(non_political,political)) |> 
+  mutate(name = ifelse(name=="political","political news","non-political news")) |> 
+  ggplot(aes(x=factor(cutoff),y=value,col=name))+
+    geom_point()+
+    geom_hline(yintercept = 0, linetype = "dashed",color="transparent")+
+    scale_color_manual(values=c("political news" = "#AA8939",
+                                "non-political news" = "#303C74"),
+                       labels=c("political news","non-political news"),name="")+
+    facet_grid(type~case,scales = "free_y") +
+    theme_bw()+
+    theme(legend.position = "none",
+          panel.grid.minor = element_blank(),
+          legend.text = element_text(family="sans", size = 20),
+          axis.text.x = element_text(family="sans", size = 12),
+          strip.text = element_text(face = "bold"),
+          text = element_text(family="sans", size=16))+
+    labs(x = "cutoff (in sec)",y = "")
+
+ggsave("figures/seg_score_comparison.pdf",width=16,height=10)
+
+## diversity comparison ----  
+bind_rows(
+  readRDS("processed_data/simpson_diversity.RDS") |> mutate(type="Simpson Diversity"),
+  readRDS("processed_data/entropy.RDS") |> mutate(type="Shanon Entropy")
+) |> 
+  pivot_longer(cols = c(non_political,political)) |> 
+  mutate(name = ifelse(name=="political","political news","non-political news")) |> 
+  ggplot(aes(x=factor(cutoff),y=value,col=name))+
+  geom_point()+
+  geom_hline(yintercept = 0, linetype = "dashed",color="transparent")+
+  scale_color_manual(values=c("political news" = "#AA8939",
+                              "non-political news" = "#303C74"),
+                     labels=c("political news","non-political news"),name="")+
+  facet_grid(type~case,scales = "free_y") +
+  theme_bw()+
+  theme(legend.position = "none",
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(family="sans", size = 20),
+        axis.text.x = element_text(family="sans", size = 12),
+        strip.text = element_text(face = "bold"),
+        text = element_text(family="sans", size=16))+
+  labs(x = "cutoff (in sec)",y = "")
+
+ggsave("figures/diversity_comparison.pdf",width=16,height=10)
+
+## networks ----
+source("Rscripts/helpers.R")
+library(igraph)
+### create networks ----
+fl <- list.files("processed_data/tracking/news_only", full.names = TRUE,pattern = "csv")
+res <- tibble(
+  country = character(0),
+  type = character(0),
+  cutoff = numeric(0),
+  political = logical(0),
+  fixN = logical(0),
+  network = list()
+)
+for (f in fl) {
+  cat(f,"\n")
+  ctry <- str_remove(str_extract(f, "[a-z]{2}\\."), "\\.")
+  dt <- data.table::fread(f)
+  for (cval in cutoffs) {
+    gnews <- create_networks(dt, political = FALSE, weights = FALSE, fixN = fixN, reach = 0, cutoff = cval)
+    gpols <- create_networks(dt, political = TRUE, weights = FALSE, fixN = fixN, reach = 0, cutoff = cval)
+    
+    tmp <- tibble(
+      country = rep(ctry, 6), type = c(names(gnews), names(gpols)),
+      cutoff = cval, political = rep(c(FALSE, TRUE), each = 3), fixN = fixN,
+      network = c(unname(gnews), unname(gpols))
+    )
+    
+    res <- bind_rows(res, tmp)
+  }
+}
+saveRDS(res, "processed_data/networks.RDS")
+
+tbl <- readRDS("processed_data/networks.RDS")
+tbl[["density"]] <- sapply(tbl[["network"]], graph.density)
+tbl[["political"]] <- if_else(tbl[["political"]],"political news","non-political news")
+tbl[["case"]] <- long_cases[match(tbl$country,short_cases)]
+# plot density for all networks ----
+ggplot(tbl,aes(x=factor(cutoff),y=density,col=political))+
+  geom_point()+
+  geom_hline(yintercept = 0, linetype = "dashed",color="transparent")+
+  scale_color_manual(values=c("political news" = "#AA8939",
+                              "non-political news" = "#303C74"),
+                     labels=c("political news","non-political news"),name="")+
+  facet_grid(type~case,scales = "free_y") +
+  theme_bw()+
+  theme(legend.position = "none",
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(family="sans", size = 20),
+        axis.text.x = element_text(family="sans", size = 12),
+        strip.text = element_text(face = "bold"),
+        text = element_text(family="sans", size=16))+
+  labs(x = "cutoff (in sec)",y = "")
+
+ggsave("figures/network_densities.pdf",width=16,height=10)

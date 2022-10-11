@@ -25,9 +25,9 @@ disparity1 <- function(A, p = 0.05) {
   suppressMessages(backbone::disparity(W, class = "igraph", alpha = p))
 }
 
-sdsm1 <- function(A, p = 0.05) {
-  suppressMessages(backbone::sdsm(A, class = "igraph", alpha = p))
-}
+# sdsm1 <- function(A, p = 0.05) {
+#   suppressMessages(backbone::sdsm(A, class = "igraph", alpha = p))
+# }
 
 # create all networks from the data ----
 
@@ -50,7 +50,7 @@ create_networks <- function(dt, political = FALSE, weights = FALSE, fixN = FALSE
     l1 <- pmi(A)
     l2 <- disparity1(A, p = 0.05)
     l3 <- phic(A, p = 0.05)
-    l4 <- sdsm1(A, p = 0.05)
+    # l4 <- sdsm1(A, p = 0.05)
     if (weights) {
       W <- A %*% t(A)
       A1 <- as_adj(l1, sparse = FALSE)
@@ -62,8 +62,8 @@ create_networks <- function(dt, political = FALSE, weights = FALSE, fixN = FALSE
       A3 <- as_adj(l3, sparse = FALSE)
       l3 <- graph_from_adjacency_matrix(W * A3, "undirected", weighted = "weight")
       
-      A4 <- as_adj(l4, sparse = FALSE)
-      l4 <- graph_From_adjacency_matrix(W * A4, "undirected", weighted = "weight")
+      # A4 <- as_adj(l4, sparse = FALSE)
+      # l4 <- graph_From_adjacency_matrix(W * A4, "undirected", weighted = "weight")
     }
   } else {
     el_pol <- dt1[duration >= cutoff & political != "", c("panelist_id", "domain")]
@@ -73,7 +73,7 @@ create_networks <- function(dt, political = FALSE, weights = FALSE, fixN = FALSE
     l1 <- pmi(A)
     l2 <- disparity1(A, p = 0.05)
     l3 <- phic(A, p = 0.05)
-    l4 <- sdsm1(A, p = 0.05)
+    # l4 <- sdsm1(A, p = 0.05)
     if (weights) {
       W <- A %*% t(A)
       A1 <- as_adj(l1, sparse = FALSE)
@@ -85,8 +85,8 @@ create_networks <- function(dt, political = FALSE, weights = FALSE, fixN = FALSE
       A3 <- as_adj(l3, sparse = FALSE)
       l3 <- graph_from_adjacency_matrix(W * A3, "undirected", weighted = "weight")
       
-      A4 <- as_adj(l4, sparse = FALSE)
-      l4 <- graph_From_adjacency_matrix(W * A4, "undirected", weighted = "weight")
+      # A4 <- as_adj(l4, sparse = FALSE)
+      # l4 <- graph_From_adjacency_matrix(W * A4, "undirected", weighted = "weight")
     }
   }
   if (vcount(l2) < vcount(l1)) {
@@ -97,20 +97,20 @@ create_networks <- function(dt, political = FALSE, weights = FALSE, fixN = FALSE
     idx <- which(!V(l1)$name %in% V(l3)$name)
     l3 <- add.vertices(l3, length(idx), attr = list(name = V(l1)$name[idx]))
   }
-  if (vcount(l4) < vcount(l1)) {
-    idx <- which(!V(l1)$name %in% V(l4)$name)
-    l4 <- add.vertices(l4, length(idx), attr = list(name = V(l1)$name[idx]))
-  }
+  # if (vcount(l4) < vcount(l1)) {
+  #   idx <- which(!V(l1)$name %in% V(l4)$name)
+  #   l4 <- add.vertices(l4, length(idx), attr = list(name = V(l1)$name[idx]))
+  # }
   
-  list(pmi = l1, disparity = l2, phi = l3,sdsm = l4)
+  list(pmi = l1, disparity = l2, phi = l3)#,sdsm = l4)
 }
 
 #population sd as used by Fletcher et al 2020
-psd <- function(x,n){
-  if(!missing(n)){
-    stopifnot(length(n)==length(x))
-    x <- rep(x,n)
-  }
-  mx <- mean(x)
-  sqrt(mean((x-mx)^2))
-}
+# psd <- function(x,n){
+#   if(!missing(n)){
+#     stopifnot(length(n)==length(x))
+#     x <- rep(x,n)
+#   }
+#   mx <- mean(x)
+#   sqrt(mean((x-mx)^2))
+# }
