@@ -757,6 +757,9 @@ tidy_toplot_education_inter <- tidy_toplot_education_inter |>
 tidy_toplot_integrated <- bind_rows(tidy_toplot_country_inter, tidy_toplot_access_inter, tidy_toplot_interest_inter, tidy_toplot_extremity_inter,
                                 tidy_toplot_generation_inter, tidy_toplot_gender_inter, tidy_toplot_education_inter)
 
+if(!dir.exists("processed_data/tracking/regression")){
+  dir.create("processed_data/tracking/regression")
+}
 write_csv(tidy_toplot_integrated, "processed_data/tracking/regression/interaction_terms.csv")
 ## Plotting ----
 tidy_toplot_integrated <- read_csv("processed_data/tracking/regression/interaction_terms.csv")
