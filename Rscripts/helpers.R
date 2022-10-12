@@ -37,10 +37,11 @@ create_networks <- function(dt, political = FALSE, weights = FALSE, fixN = FALSE
   n_outlets <- length(outlets)
   dt1 <- dt[domain %in% outlets]
   if (fixN) {
-    peeps <- dt[type!=""& political=="political" & duration>=120]
+    peeps <- dt[type!=""& duration>=120]
     peeps <- unique(peeps[["panelist_id"]])
     # peeps <- unique(dt[political == "political"][, .(panelist_id)])[["panelist_id"]]
     dt1 <- dt1[panelist_id %in% peeps]
+    outlets <- unique(dt1$domain)
   }
   if (!political) {
     el <- dt1[duration >= cutoff, c("panelist_id", "domain")]
@@ -89,18 +90,18 @@ create_networks <- function(dt, political = FALSE, weights = FALSE, fixN = FALSE
       # l4 <- graph_From_adjacency_matrix(W * A4, "undirected", weighted = "weight")
     }
   }
-  if (vcount(l2) < vcount(l1)) {
-    idx <- which(!V(l1)$name %in% V(l2)$name)
-    l2 <- add.vertices(l2, length(idx), attr = list(name = V(l1)$name[idx]))
+  if (vcount(l1) < length(outlets)) {
+    idx <- which(!outlets %in% V(l1)$name)
+    l1 <- add.vertices(l1, length(idx), attr = list(name = outlets[idx]))
   }
-  if (vcount(l3) < vcount(l1)) {
-    idx <- which(!V(l1)$name %in% V(l3)$name)
-    l3 <- add.vertices(l3, length(idx), attr = list(name = V(l1)$name[idx]))
+  if (vcount(l2) < length(outlets)) {
+    idx <- which(!outlets %in% V(l2)$name)
+    l2 <- add.vertices(l2, length(idx), attr = list(name = outlets[idx]))
   }
-  # if (vcount(l4) < vcount(l1)) {
-  #   idx <- which(!V(l1)$name %in% V(l4)$name)
-  #   l4 <- add.vertices(l4, length(idx), attr = list(name = V(l1)$name[idx]))
-  # }
+  if (vcount(l3) < length(outlets)) {
+    idx <- which(!outlets %in% V(l3)$name)
+    l3 <- add.vertices(l3, length(idx), attr = list(name = outlets[idx]))
+  }
   
   list(pmi = l1, disparity = l2, phi = l3)#,sdsm = l4)
 }
