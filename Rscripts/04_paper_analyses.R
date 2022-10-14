@@ -3,7 +3,10 @@
 # TODO: network stats [x]
 # TODO: Bakshy [ ]
 # TODO: descriptive patterns (scores of other peeps) [ ]
-# TODO: Rerun with mobile + desktop [ ]
+# TODO: Rerun with mobile + desktop [x]
+# TODO: send csv results und plot code to Frank [x]
+# TODO: direct access -> other access []
+# TODO: prevalence: news visits/ [ ]
 # packages ----
 library(tidyverse)
 library(data.table)
@@ -1080,7 +1083,6 @@ tidy_toplot_edu <- bind_rows(non_pol,pol) |>
                                       "1" = "(G) Education: Low",
                                       "3" = "(G) Education: High"))
 
-## plotting ----
 # Build single concise plot
 tidy_toplot_integrated <- bind_rows(tidy_toplot_country, tidy_toplot_access, 
                                     tidy_toplot_interest, tidy_toplot_extreme,
@@ -1093,8 +1095,10 @@ tidy_toplot_integrated <- tidy_toplot_integrated  %>%
                                      "non_political" = "Non-Political News",
                                      "political" = "Political News"))
 
-write_csv(tidy_toplot_integrated, "processed_data/conditional_effects.csv")
+write_csv(tidy_toplot_integrated, "processed_data/tracking/regression/conditional_effects.csv")
 
+## Plotting ----
+tidy_toplot_integrated <- read_csv("processed_data/tracking/regression/conditional_effects.csv")
 tidy_toplot_integrated |> 
   ggplot(aes(y = Estimate, x = factor(threshold))) +
   geom_pointrange(
