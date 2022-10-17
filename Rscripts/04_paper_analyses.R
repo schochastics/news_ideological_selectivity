@@ -416,7 +416,7 @@ pol <- lapply(cutoffs,function(y) {
 
 combine_results(non_pol,pol) |> saveRDS("processed_data/simpson_diversity.RDS")
 
-## Entropy ----
+## Shannon ----
 non_pol <- lapply(cutoffs,function(y) {
   sapply(fl,function(x){
     dt <- data.table::fread(paste0("processed_data/tracking/news_only/",x))
