@@ -5,7 +5,7 @@
 # TODO: descriptive patterns (scores of other peeps) [ ]
 # TODO: Rerun with mobile + desktop [x]
 # TODO: send csv results und plot code to Frank [x]
-# TODO: direct access -> other access []
+# TODO: direct access -> other access [x]
 # TODO: prevalence: news visits/ [ ]
 # packages ----
 library(tidyverse)
@@ -1100,6 +1100,12 @@ write_csv(tidy_toplot_integrated, "processed_data/tracking/regression/conditiona
 ## Plotting ----
 tidy_toplot_integrated <- read_csv("processed_data/tracking/regression/conditional_effects.csv")
 tidy_toplot_integrated |> 
+  mutate(level=str_replace_all(level,"\\(B\\) Access","\\(C\\) News Access")) |> 
+  mutate(level=str_replace_all(level,"\\(C\\) Political Interest","\\(B\\) Political Interest")) |> 
+  mutate(level=str_replace_all(level,"Direct","Non-referred")) |> 
+  mutate(header=str_replace_all(header,"\\(B\\) Access","\\(C\\) News Access")) |> 
+  mutate(header=str_replace_all(header,"\\(C\\) Political Interest","\\(B\\) Political Interest")) |> 
+  dplyr::filter(str_detect(level,"\\(A\\)|\\(B\\)|\\(C\\)")) |> 
   ggplot(aes(y = Estimate, x = factor(threshold))) +
   geom_pointrange(
     aes(ymin = CI_lower, ymax = CI_upper, color = level,shape=level), size=0.32,
@@ -1122,10 +1128,10 @@ tidy_toplot_integrated |>
   theme(axis.text = element_text(size = 10),
         legend.position = "bottom",
         legend.title = element_blank()) +
-  labs(y = "cutoff (in sec)") +
+  labs(y = "Ideological Selectivity",x="Threshold") +
   geom_hline(yintercept = 0, linetype = "dashed")
 
-ggsave("figures/figure3_conditional.pdf", width = 15, height = 7)
+ggsave("figures/figure3_conditional_reduced.pdf", width = 10, height = 7)
 
 # Appendix ----
 
