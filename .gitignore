@@ -8,3 +8,8 @@ Rscripts/testing/
 processed_data/
 figures/
 Rscripts/99_testing.R
+Rscripts/00_process_data.R
+Rscripts/01_create_networks.R
+Rscripts/02_analyze_networks.R
+Rscripts/03_analyze_data.R
+Rscripts/old/
