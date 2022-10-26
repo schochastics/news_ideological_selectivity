@@ -1,19 +1,14 @@
-# TODO: dissim/atkins/isolation [x]
-# TODO: Entropy+Diversity [x]
-# TODO: network stats [x]
-# TODO: Bakshy [ ]
-# TODO: descriptive patterns (scores of other peeps) [ ]
-# TODO: Rerun with mobile + desktop [x]
-# TODO: send csv results und plot code to Frank [x]
-# TODO: direct access -> other access [x]
-# TODO: prevalence: news visits/ [ ]
 # packages ----
 library(tidyverse)
 library(data.table)
 library(patchwork)
 library(lme4)
 
-fl <- list.files("processed_data/tracking/news_only/",pattern = "csv")
+# one of "desktop", "mobile" or "both"
+# main paper is "both", appendix is "desktop"
+platform <- "both"
+
+fl <- list.files(paste0("processed_data/",platform,"/news_only"),pattern = "csv")
 cutoffs <- c(3,10,30,60,120)
 short_cases <- c("de","es","fr","it","uk","us")
 long_cases <- c("Germany","Spain","France","Italy","United Kingdom","USA")
@@ -22,41 +17,15 @@ fixN <- TRUE
 ##----------------------------------------------------------------------------##
 # Overall news descriptives ----
 ##----------------------------------------------------------------------------##
-if(!dir.exists("processed_data/tracking/figure1/")){
-  dir.create("processed_data/tracking/figure1/")
+if(!dir.exists("processed_data/stats/")){
+  dir.create("processed_data/stats/")
 }
 
-# for(i in seq_along(fl)){
-#   cat(long_cases[i],sep="\n")
-#   dt <- fread(paste0("processed_data/tracking/",fl[i]))
-#   tst1 <- dt[,.(news_vis=sum(type!="")),by=.(panelist_id)]
-#   val1 <- sum(tst1$news_vis!=0)/nrow(tst1)
-#   
-#   tst1 <- dt[,.(news_vis=sum(type!="" & political=="")),by=.(panelist_id)]
-#   val2 <- sum(tst1$news_vis!=0)/nrow(tst1)
-#   
-#   tst1 <- dt[,.(news_vis=sum(type!="" & political!="")),by=.(panelist_id)]
-#   val3 <- sum(tst1$news_vis!=0)/nrow(tst1)
-#   dat1 <- data.frame(type=c("news","non_news"),value=c(sum(dt[["type"]]!="")/nrow(dt),sum(dt[["type"]]=="")/nrow(dt)))
-#   
-#   dat2 <- data.frame(type=c("News in general","Non-political news","political news"),
-#                      value=c(val1,val2,val3)) 
-#   
-#   
-#   dat3 <- data.frame(
-#     type = c("political news","Non-political news"),
-#     value = c(sum(dt[["political"]]!="")/sum(dt[["type"]]!=""),1-sum(dt[["political"]]!="")/sum(dt[["type"]]!="")))
-#   
-#   dat3$ypos <- cumsum(dat3$value)- 0.5*dat3$value 
-#   
-#   saveRDS(list(dat1,dat2,dat3),paste0("processed_data/tracking/figure1/",short_cases[i],".RDS"))
-# }
-
 vis_cnt_lst <- map(seq_along(fl),function(i){
-  res_visitors <- res_visits <- data.table(cutoff=cutoffs,
-                                           non_pol=numeric(length(cutoffs)),
-                                           pol=numeric(length(cutoffs)))
-  df <- fread(paste0("processed_data/tracking/news_only/",fl[i]))
+  res_visitors <- data.table(cutoff=cutoffs,
+                             non_pol=numeric(length(cutoffs)),
+                             pol=numeric(length(cutoffs)))
+  df <- fread(paste0("processed_data/",platform,"/news_only/",fl[i]))
   n <- length(unique(df[duration>= 3][["panelist_id"]]))
   # n1 <- length(unique(df[["panelist_id"]][df[["political"]]=="political"]))
   fracs <- sapply(cutoffs,function(x){
@@ -67,37 +36,12 @@ vis_cnt_lst <- map(seq_along(fl),function(i){
   res_visitors$pol <-  fracs[1,]
   res_visitors$non_pol <-  fracs[2,] 
   
-  # totals <- sapply(cutoffs,function(x){
-  #   df[duration>=x,.(count=.N),by=.(political)][["count"]]
-  # })
-  # #wtf is wrong with the UK???
-  # # if(i==5){
-  # #   totals[1:2,1:2] <- totals[2:1,2:1]
-  # # }
-  # 
-  # res_visits$non_pol <- totals[1,]/colSums(totals)
-  # res_visits$pol <- totals[2,]/colSums(totals)
-  # list(visits = res_visits,visitors = res_visitors)
   res_visitors
 })
-saveRDS(vis_cnt_lst,"processed_data/tracking/figure1/vis_counts.RDS")
+saveRDS(vis_cnt_lst,paste0("processed_data/stats/",platform,"_vis_counts.RDS"))
 
-# Figure1 for paper ----
-# fl1 <- paste0("processed_data/tracking/figure1/",short_cases,".RDS")
-
-# plt_tbl1 <- map_dfr(seq_along(fl1),function(x){
-#   lst <- readRDS(fl1[x])
-#   lst[[2]]$panel <- "News domain visitors"
-#   lst[[3]]$panel <- "Visits of news articles"
-#   lst[[2]]$case <- long_cases[x]
-#   lst[[3]]$case <- long_cases[x]
-#   lst[[2]]$type <- str_to_lower(lst[[2]]$type)
-#   lst[[3]]$type <- str_to_lower(lst[[3]]$type)
-#   bind_rows(lst[[2]][-1,],lst[[3]][,-3])
-# })
-
-vis_cnt_lst <- readRDS("processed_data/tracking/figure1/vis_counts.RDS")
-plt_tbl2 <- map_dfr(seq_along(vis_cnt_lst),function(x){
+vis_cnt_lst <- readRDS(paste0("processed_data/stats/",platform,"_vis_counts.RDS"))
+plt_tbl <- map_dfr(seq_along(vis_cnt_lst),function(x){
   vis_cnt_lst[[x]]$case <- long_cases[x]
   # vis_cnt_lst[[x]]$level <- "Proportion of news article visits"
   vis_cnt_lst[[x]]$level <- "Proportion of news domain visitors"
@@ -106,31 +50,7 @@ plt_tbl2 <- map_dfr(seq_along(vis_cnt_lst),function(x){
   pivot_longer(cols = c(non_pol,pol)) |> 
   mutate(name = ifelse(name=="pol","political news","non-political news"))
 
-# TODO: fix UK
-# plt_tbl2$value[plt_tbl2$case=="United Kingdom" & 
-#                plt_tbl2$cutoff==3 & 
-#                plt_tbl2$level=="Proportion of news article visits"] <- 
-#   rev(plt_tbl2$value[plt_tbl2$case=="United Kingdom" & 
-#                        plt_tbl2$cutoff==3 & 
-#                        plt_tbl2$level=="Proportion of news article visits"])
-
-# p1 <- ggplot(plt_tbl1,aes(x=type,y=value,fill = type))+
-#   geom_col()+
-#   scale_fill_manual(values=c("political news" = "#AA8939","non-political news" = "#303C74"),
-#                     labels=c("political news","non-political news"),name="")+
-#   facet_grid(panel~case)+
-#   theme_bw()+
-#   theme(legend.position = "bottom",
-#         panel.grid.minor = element_blank(),
-#         legend.text = element_text(family="sans", size = 20),
-#         axis.text.x = element_blank(),
-#         axis.ticks.x = element_blank(), 
-#         strip.text = element_text(face = "bold"),
-#         text = element_text(family="sans", size=16))+
-#   scale_y_continuous(labels = scales::label_percent())+
-#   labs(x="",y="")
-
-p2 <- ggplot(plt_tbl2,aes(x=as.factor(cutoff),y=value,color=name)) + 
+p <- ggplot(plt_tbl,aes(x=as.factor(cutoff),y=value,color=name)) + 
   geom_point(position = position_dodge(0.6))+
   geom_hline(yintercept = 0, linetype = "dashed",color="transparent")+
   scale_color_manual(values=c("political news" = "#AA8939","non-political news" = "#303C74"),
@@ -147,9 +67,7 @@ p2 <- ggplot(plt_tbl2,aes(x=as.factor(cutoff),y=value,color=name)) +
   scale_y_continuous(labels = scales::label_percent())
   # guides(fill = guide_legend(override.aes = list(size=3)))
 
-# p <- p1 + p2
-p <- p2
-ggsave("figures/figure1.pdf",width=10,height=4)
+ggsave(paste0("figures/",platform,"_figure1.pdf"),p,width=10,height=4)
  
 ##----------------------------------------------------------------------------##
 # Comparison pol/nonpol ----
@@ -180,7 +98,7 @@ combine_results <- function(non_pol,pol){
 
 non_pol <- lapply(cutoffs,function(y) {
   sapply(fl,function(x){
-    dt <- data.table::fread(paste0("processed_data/tracking/news_only/",x))
+    dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
     if(fixN){
       peeps <- dt[duration>=120]
       peeps <- unique(peeps[["panelist_id"]])
@@ -200,7 +118,7 @@ non_pol <- lapply(cutoffs,function(y) {
 
 pol <- lapply(cutoffs,function(y) {
   sapply(fl,function(x){
-    dt <- data.table::fread(paste0("processed_data/tracking/news_only/",x))
+    dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
     if(fixN){
       peeps <- dt[duration>=120]
       peeps <- unique(peeps[["panelist_id"]])
@@ -218,12 +136,13 @@ pol <- lapply(cutoffs,function(y) {
   })
 })
 
-combine_results(non_pol,pol) |> saveRDS("processed_data/segregation_scores.RDS")
+combine_results(non_pol,pol) |> 
+  saveRDS(paste0("processed_data/",platform,"_segregation_scores.RDS"))
 
 ## dissimilarity index -----
 non_pol <- lapply(cutoffs,function(y) {
   sapply(fl,function(x){
-    dt <- data.table::fread(paste0("processed_data/tracking/news_only/",x))
+    dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
     if(fixN){
       peeps <- dt[duration>=120]
       peeps <- unique(peeps[["panelist_id"]])
@@ -243,7 +162,7 @@ non_pol <- lapply(cutoffs,function(y) {
 
 pol <- lapply(cutoffs,function(y) {
   sapply(fl,function(x){
-    dt <- data.table::fread(paste0("processed_data/tracking/news_only/",x))
+    dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
     if(fixN){
       peeps <- dt[duration>=120]
       peeps <- unique(peeps[["panelist_id"]])
@@ -261,13 +180,14 @@ pol <- lapply(cutoffs,function(y) {
   })
 })
 
-combine_results(non_pol,pol) |> saveRDS("processed_data/dissimilarity_scores.RDS")
+combine_results(non_pol,pol) |> 
+  saveRDS(paste0("processed_data/stats/",platform,"_dissimilarity_scores.RDS"))
 
 
 ## Atkinson index -----
 non_pol <- lapply(cutoffs,function(y) {
   sapply(fl,function(x){
-    dt <- data.table::fread(paste0("processed_data/tracking/news_only/",x))
+    dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
     if(fixN){
       peeps <- dt[duration>=120]
       peeps <- unique(peeps[["panelist_id"]])
@@ -287,7 +207,7 @@ non_pol <- lapply(cutoffs,function(y) {
 
 pol <- lapply(cutoffs,function(y) {
   sapply(fl,function(x){
-    dt <- data.table::fread(paste0("processed_data/tracking/news_only/",x))
+    dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
     if(fixN){
       peeps <- dt[duration>=120]
       peeps <- unique(peeps[["panelist_id"]])
@@ -305,7 +225,8 @@ pol <- lapply(cutoffs,function(y) {
   })
 })
 
-combine_results(non_pol,pol) |> saveRDS("processed_data/atkinson_scores.RDS")
+combine_results(non_pol,pol) |> 
+  saveRDS(paste0("processed_data/stats/",platform,"_atkinson_scores.RDS"))
 
 # Partisan slant/news diets ----
 # The ideology variable is centered around the respective country mean
@@ -318,7 +239,7 @@ combine_results(non_pol,pol) |> saveRDS("processed_data/atkinson_scores.RDS")
 # simply produces a little higher values by giving more extreme news diets a little more weight from the outset)
 non_pol <- lapply(cutoffs,function(y) {
   sapply(fl,function(x){
-    dt <- data.table::fread(paste0("processed_data/tracking/news_only/",x))
+    dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
     if(fixN){
       peeps <- dt[duration>=120]
       peeps <- unique(peeps[["panelist_id"]])
@@ -341,7 +262,7 @@ non_pol <- lapply(cutoffs,function(y) {
 
 pol <- lapply(cutoffs,function(y) {
   sapply(fl,function(x){
-    dt <- data.table::fread(paste0("processed_data/tracking/news_only/",x))
+    dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
     if(fixN){
       peeps <- dt[duration>=120]
       peeps <- unique(peeps[["panelist_id"]])
@@ -362,13 +283,14 @@ pol <- lapply(cutoffs,function(y) {
   })
 })
 
-combine_results(non_pol,pol) |> saveRDS("processed_data/news_diet_slant.RDS")
+combine_results(non_pol,pol) |> 
+  saveRDS(paste0("processed_data/stats/",platform,"_news_diet_slant.RDS"))
 
 # Diversity measures ----
 ## Simpson Diversity ----
 non_pol <- lapply(cutoffs,function(y) {
   sapply(fl,function(x){
-    dt <- data.table::fread(paste0("processed_data/tracking/news_only/",x))
+    dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
     if(fixN){
       peeps <- dt[duration>=120]
       peeps <- unique(peeps[["panelist_id"]])
@@ -392,7 +314,7 @@ non_pol <- lapply(cutoffs,function(y) {
 
 pol <- lapply(cutoffs,function(y) {
   sapply(fl,function(x){
-    dt <- data.table::fread(paste0("processed_data/tracking/news_only/",x))
+    dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
     if(fixN){
       peeps <- dt[duration>=120]
       peeps <- unique(peeps[["panelist_id"]])
@@ -414,12 +336,13 @@ pol <- lapply(cutoffs,function(y) {
   })
 })
 
-combine_results(non_pol,pol) |> saveRDS("processed_data/simpson_diversity.RDS")
+combine_results(non_pol,pol) |> 
+  saveRDS(paste0("processed_data/stats/",platform,"_simpson_diversity.RDS"))
 
 ## Shannon ----
 non_pol <- lapply(cutoffs,function(y) {
   sapply(fl,function(x){
-    dt <- data.table::fread(paste0("processed_data/tracking/news_only/",x))
+    dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
     if(fixN){
       peeps <- dt[duration>=120]
       peeps <- unique(peeps[["panelist_id"]])
@@ -441,7 +364,7 @@ non_pol <- lapply(cutoffs,function(y) {
 
 pol <- lapply(cutoffs,function(y) {
   sapply(fl,function(x){
-    dt <- data.table::fread(paste0("processed_data/tracking/news_only/",x))
+    dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
     if(fixN){
       peeps <- dt[duration>=120]
       peeps <- unique(peeps[["panelist_id"]])
@@ -461,12 +384,15 @@ pol <- lapply(cutoffs,function(y) {
   })
 })
 
-combine_results(non_pol,pol) |> saveRDS("processed_data/entropy.RDS")
+combine_results(non_pol,pol) |> 
+  saveRDS(paste0("processed_data/stats/",platform,"_entropy.RDS"))
 
 
 # Figure 2 for Paper----
-result_files <- c("segregation_scores.RDS","simpson_diversity.RDS","news_diet_slant.RDS")
-types <- c("(A) Ideological segregation","(B) News Diet Diversity","(C) Partisanship in News Diets")
+result_files <- paste0(platform,c("_segregation_scores.RDS",
+                                  "_simpson_diversity.RDS",
+                                  "_news_diet_slant.RDS"))
+types <- c("(A) Ideological Segregation","(B) News Diet Diversity","(C) Partisanship in News Diets")
 
 res_tbl <- map_dfr(seq_along(result_files),function(x){
   readRDS(paste0("processed_data/",result_files[x])) |> mutate(type=types[x]) |> 
@@ -490,7 +416,7 @@ ggplot(res_tbl,aes(x=as.factor(cutoff),y=score,color = news_type)) +
   labs(x = "cutoff (in sec)",y = "score")+
   guides(colour = guide_legend(override.aes = list(size=3)))
 
-ggsave("figures/figure2.pdf",width=16,height=10)
+ggsave(paste0("figures/",platform,"_figure2.pdf"),width=16,height=10)
 
 
 # Prepare Regression Data ----
@@ -511,7 +437,7 @@ survey_lm[, polinterest := polinterest * -1]
 survey_lm[, age := (age-30)/35]
 
 lm_dt <- lapply(seq_along(fl),function(i){
-  dt <- fread(paste0("processed_data/tracking/news_only/",fl[i]))
+  dt <- fread(paste0("processed_data/",platform,"/news_only/",fl[i]))
   dt[ ,country := long_cases[i]]
   dt[, prev_type:=fcase(prev_type == "direct","direct",
                         prev_type == "ebay","direct",
@@ -760,12 +686,12 @@ tidy_toplot_education_inter <- tidy_toplot_education_inter |>
 tidy_toplot_integrated <- bind_rows(tidy_toplot_country_inter, tidy_toplot_access_inter, tidy_toplot_interest_inter, tidy_toplot_extremity_inter,
                                 tidy_toplot_generation_inter, tidy_toplot_gender_inter, tidy_toplot_education_inter)
 
-if(!dir.exists("processed_data/tracking/regression")){
-  dir.create("processed_data/tracking/regression")
+if(!dir.exists("processed_data/regression")){
+  dir.create("processed_data/regression")
 }
-write_csv(tidy_toplot_integrated, "processed_data/tracking/regression/interaction_terms.csv")
+write_csv(tidy_toplot_integrated, paste0("processed_data/regression/",platform,"_interaction_terms.csv"))
 ## Plotting ----
-tidy_toplot_integrated <- read_csv("processed_data/tracking/regression/interaction_terms.csv")
+tidy_toplot_integrated <- read_csv(paste0("processed_data/regression/",platform,"_interaction_terms.csv"))
 tidy_toplot_integrated <- tidy_toplot_integrated |> mutate(header = as.factor(header))
 level_order <- rev(levels(tidy_toplot_integrated$header))
 
@@ -775,22 +701,29 @@ tidy_toplot_integrated <- tidy_toplot_integrated |>
                                      "non_political" = "Non-Political News",
                                      "political" = "Political News"))
 
-tidy_toplot_integrated  |>  
-  ggplot(aes(y = Estimate, x = factor(threshold))) +
+tidy_toplot_integrated |> 
+  mutate(term=str_replace_all(term,"\\(B\\) Access","\\(C\\) News Access")) |> 
+  mutate(term=str_replace_all(term,"\\(C\\) Political Interest","\\(B\\) Political Interest")) |> 
+  mutate(term=str_replace_all(term,"Direct","Non-referred")) |> 
+  mutate(header=str_replace_all(header,"\\(B\\) Access","\\(C\\) News Access")) |> 
+  mutate(header=str_replace_all(header,"Reference: Direct","Reference: Non-referred")) |> 
+  mutate(header=str_replace_all(header,"\\(C\\) Political Interest","\\(B\\) Political Interest")) |>   ggplot(aes(y = Estimate, x = factor(threshold))) +
   geom_pointrange(
     aes(ymin = CI_lower, ymax = CI_upper, color = term,shape=term), size=0.32,
     position = position_dodge2(w = 0.5)) +
   coord_flip() +
   theme_bw() + 
   scale_color_manual(values = c(
-    "#E69F00", "#009E73", "#0072B2", "#D55E00", "#CC79A7",
+    "#E69F00", "#009E73", "#0072B2", "#D55E00", "grey25",
+    "#E69F00",
     "#E69F00", "#009E73", "#0072B2", "#D55E00",
-    "black","black","black","black","black"
+    "#009E73", "#0072B2", "#D55E00", "grey25"
   ),name = "")+
   scale_shape_manual(values = c(
     15,15,15,15,15,
+    17,
     16,16,16,16,
-    17,7,8,9,10
+    17,17,17,17
   ), name = "")+
   facet_grid(type~header, scales = "free_x") +
   theme(axis.text = element_text(size = 10),
@@ -801,7 +734,7 @@ tidy_toplot_integrated  |>
   geom_hline(yintercept = 0, linetype = "dashed")+
   guides(color = guide_legend(override.aes = list(size=0.75)))
 
-ggsave("figures/figure_SM3_2.pdf", width = 15, height = 7)
+ggsave(paste0("figures/",platform,"_regression_interaction.pdf"), width = 15, height = 7)
 
 # Regressions II-----
 ## Country (Conditional Effects) ----
@@ -1095,10 +1028,10 @@ tidy_toplot_integrated <- tidy_toplot_integrated  %>%
                                      "non_political" = "Non-Political News",
                                      "political" = "Political News"))
 
-write_csv(tidy_toplot_integrated, "processed_data/tracking/regression/conditional_effects.csv")
+write_csv(tidy_toplot_integrated, paste0("processed_data/regression/",platform,"_conditional_effects.csv"))
 
 ## Plotting ----
-tidy_toplot_integrated <- read_csv("processed_data/tracking/regression/conditional_effects.csv")
+tidy_toplot_integrated <- read_csv(paste0("processed_data/regression/",platform,"_conditional_effects.csv"))
 tidy_toplot_integrated |> 
   mutate(level=str_replace_all(level,"\\(B\\) Access","\\(C\\) News Access")) |> 
   mutate(level=str_replace_all(level,"\\(C\\) Political Interest","\\(B\\) Political Interest")) |> 
@@ -1114,9 +1047,10 @@ tidy_toplot_integrated |>
   theme_bw() + 
   theme_bw() + 
   scale_color_manual(values = c(
-    "#E69F00", "#009E73", "#0072B2", "#D55E00", "#CC79A7",
-    "#E69F00", "#009E73", "#0072B2", "#D55E00",
-    "#E69F00", "#009E73","#E69F00", "#009E73","#E69F00", "#009E73",
+    "#E69F00", "#009E73", "#0072B2", "#D55E00", "#CC79A7","grey25",
+    "#E69F00", "#009E73",
+    "#E69F00", "#009E73", "#0072B2", "#D55E00","#CC79A7",
+    "#E69F00", "#009E73","#E69F00", "#009E73",
     "#E69F00", "#009E73","#E69F00", "#009E73","#E69F00", "#009E73"
   ),name = "")+
   scale_shape_manual(values = c(
@@ -1131,15 +1065,55 @@ tidy_toplot_integrated |>
   labs(y = "Ideological Selectivity",x="Threshold") +
   geom_hline(yintercept = 0, linetype = "dashed")
 
-ggsave("figures/figure3_conditional_reduced.pdf", width = 10, height = 7)
+ggsave(paste0("figures/",platform,"_regression_conditional_reduced.pdf"), width = 10, height = 7)
+
+tidy_toplot_integrated <- read_csv(paste0("processed_data/regression/",platform,"_conditional_effects.csv"))
+tidy_toplot_integrated |> 
+  mutate(level=str_replace_all(level,"\\(B\\) Access","\\(C\\) News Access")) |> 
+  mutate(level=str_replace_all(level,"\\(C\\) Political Interest","\\(B\\) Political Interest")) |> 
+  mutate(level=str_replace_all(level,"Direct","Non-referred")) |> 
+  mutate(header=str_replace_all(header,"\\(B\\) Access","\\(C\\) News Access")) |> 
+  mutate(header=str_replace_all(header,"\\(C\\) Political Interest","\\(B\\) Political Interest")) |> 
+  # dplyr::filter(str_detect(level,"\\(A\\)|\\(B\\)|\\(C\\)")) |> 
+  ggplot(aes(y = Estimate, x = factor(threshold))) +
+  geom_pointrange(
+    aes(ymin = CI_lower, ymax = CI_upper, color = level,shape=level), size=0.32,
+    position = position_dodge2(w = 0.4)) +
+  coord_flip() +
+  theme_bw() + 
+  theme_bw() + 
+  scale_color_manual(values = c(
+    "#E69F00", "#009E73", "#0072B2", "#D55E00", "#CC79A7","grey25",
+    "#E69F00", "#009E73",
+    "#E69F00", "#009E73", "#0072B2", "#D55E00","#CC79A7",
+    "#E69F00", "#009E73","#E69F00", "#009E73",
+    "#E69F00", "#009E73","#E69F00", "#009E73","#E69F00", "#009E73"
+  ),name = "")+
+  scale_shape_manual(values = c(
+    15,15,15,15,15,
+    16,16,16,16,
+    17,17,7,7,8,8,9,9,10,10,11,11
+  ), name = "")+
+  facet_grid(type~header, scales = "free_x") +
+  theme(axis.text = element_text(size = 10),
+        legend.position = "bottom",
+        legend.title = element_blank()) +
+  labs(y = "Ideological Selectivity",x="Threshold") +
+  geom_hline(yintercept = 0, linetype = "dashed")
+
+ggsave(paste0("figures/",platform,"_regression_conditional.pdf"), width = 10, height = 7)
+
 
 # Appendix ----
 
 ## Seg score comparison ----
 bind_rows(
-  readRDS("processed_data/segregation_scores.RDS") |> mutate(type="isolation index"),
-  readRDS("processed_data/dissimilarity_scores.RDS") |> mutate(type="dissimilarity index"),
-  readRDS("processed_data/atkinson_scores.RDS") |> mutate(type="Atkinson scores")
+  readRDS(paste0("processed_data/stats/",platform,"_segregation_scores.RDS")) |> 
+    mutate(type="Isolation index"),
+  readRDS(paste0("processed_data/stats/",platform,"_dissimilarity_scores.RDS")) |> 
+    mutate(type="Dissimilarity index"),
+  readRDS(paste0("processed_data/stats/",platform,"_atkinson_scores.RDS")) |> 
+    mutate(type="Atkinson scores")
 ) |> 
   pivot_longer(cols = c(non_political,political)) |> 
   mutate(name = ifelse(name=="political","political news","non-political news")) |> 
@@ -1159,12 +1133,14 @@ bind_rows(
           text = element_text(family="sans", size=16))+
     labs(x = "cutoff (in sec)",y = "")
 
-ggsave("figures/seg_score_comparison.pdf",width=16,height=10)
+ggsave(paste0("figures/",platform,"_seg_score_comparison.pdf"),width=16,height=10)
 
 ## diversity comparison ----  
 bind_rows(
-  readRDS("processed_data/simpson_diversity.RDS") |> mutate(type="Simpson Diversity"),
-  readRDS("processed_data/entropy.RDS") |> mutate(type="Shanon Entropy")
+  readRDS(paste0("processed_data/stats/",platform,"_simpson_diversity.RDS")) |> 
+            mutate(type="Simpson Diversity"),
+  readRDS(paste0("processed_data/stats/",platform,"_entropy.RDS")) |> 
+            mutate(type="Shanon Entropy")
 ) |> 
   pivot_longer(cols = c(non_political,political)) |> 
   mutate(name = ifelse(name=="political","political news","non-political news")) |> 
@@ -1184,59 +1160,59 @@ bind_rows(
         text = element_text(family="sans", size=16))+
   labs(x = "cutoff (in sec)",y = "")
 
-ggsave("figures/diversity_comparison.pdf",width=16,height=10)
+ggsave(paste0("figures/",platform,"_diversity_comparison.pdf"),width=16,height=10)
 
-## networks ----
-source("Rscripts/helpers.R")
-library(igraph)
-### create networks ----
-fl <- list.files("processed_data/tracking/news_only", full.names = TRUE,pattern = "csv")
-res <- tibble(
-  country = character(0),
-  type = character(0),
-  cutoff = numeric(0),
-  political = logical(0),
-  fixN = logical(0),
-  network = list()
-)
-for (f in fl) {
-  cat(f,"\n")
-  ctry <- str_remove(str_extract(f, "[a-z]{2}\\."), "\\.")
-  dt <- data.table::fread(f)
-  for (cval in cutoffs) {
-    gnews <- create_networks(dt, political = FALSE, weights = FALSE, fixN = fixN, reach = 0, cutoff = cval)
-    gpols <- create_networks(dt, political = TRUE, weights = FALSE, fixN = fixN, reach = 0, cutoff = cval)
-    
-    tmp <- tibble(
-      country = rep(ctry, 6), type = c(names(gnews), names(gpols)),
-      cutoff = cval, political = rep(c(FALSE, TRUE), each = 3), fixN = fixN,
-      network = c(unname(gnews), unname(gpols))
-    )
-    
-    res <- bind_rows(res, tmp)
-  }
-}
-saveRDS(res, "processed_data/networks.RDS")
-
-tbl <- readRDS("processed_data/networks.RDS")
-tbl[["density"]] <- sapply(tbl[["network"]], graph.density)
-tbl[["political"]] <- if_else(tbl[["political"]],"political news","non-political news")
-tbl[["case"]] <- long_cases[match(tbl$country,short_cases)]
-# plot density for all networks ----
-ggplot(tbl,aes(x=factor(cutoff),y=density,col=political))+
-  geom_point()+
-  geom_hline(yintercept = 0, linetype = "dashed",color="transparent")+
-  scale_color_manual(values=c("political news" = "#AA8939",
-                              "non-political news" = "#303C74"),
-                     labels=c("political news","non-political news"),name="")+
-  facet_grid(type~case,scales = "free_y") +
-  theme_bw()+
-  theme(legend.position = "none",
-        panel.grid.minor = element_blank(),
-        legend.text = element_text(family="sans", size = 20),
-        axis.text.x = element_text(family="sans", size = 12),
-        strip.text = element_text(face = "bold"),
-        text = element_text(family="sans", size=16))+
-  labs(x = "cutoff (in sec)",y = "")
-
-ggsave("figures/network_densities.pdf",width=16,height=10)
+# ## networks ----#
+# source("Rscripts/helpers.R")
+# library(igraph)
+# ### create networks ----#
+# fl <- list.files("processed_data/",platform,"/news_only", full.names = TRUE,pattern = "csv")
+# res <- tibble(
+#   country = character(0),
+#   type = character(0),
+#   cutoff = numeric(0),
+#   political = logical(0),
+#   fixN = logical(0),
+#   network = list()
+# )
+# for (f in fl) {
+#   cat(f,"\n")
+#   ctry <- str_remove(str_extract(f, "[a-z]{2}\\."), "\\.")
+#   dt <- data.table::fread(f)
+#   for (cval in cutoffs) {
+#     gnews <- create_networks(dt, political = FALSE, weights = FALSE, fixN = fixN, reach = 0, cutoff = cval)
+#     gpols <- create_networks(dt, political = TRUE, weights = FALSE, fixN = fixN, reach = 0, cutoff = cval)
+#     
+#     tmp <- tibble(
+#       country = rep(ctry, 6), type = c(names(gnews), names(gpols)),
+#       cutoff = cval, political = rep(c(FALSE, TRUE), each = 3), fixN = fixN,
+#       network = c(unname(gnews), unname(gpols))
+#     )
+#     
+#     res <- bind_rows(res, tmp)
+#   }
+# }
+# saveRDS(res, "processed_data/stats/networks.RDS")
+# 
+# tbl <- readRDS("processed_data/networks.RDS")
+# tbl[["density"]] <- sapply(tbl[["network"]], graph.density)
+# tbl[["political"]] <- if_else(tbl[["political"]],"political news","non-political news")
+# tbl[["case"]] <- long_cases[match(tbl$country,short_cases)]
+# # plot density for all networks ----#
+# ggplot(tbl,aes(x=factor(cutoff),y=density,col=political))+
+#   geom_point()+
+#   geom_hline(yintercept = 0, linetype = "dashed",color="transparent")+
+#   scale_color_manual(values=c("political news" = "#AA8939",
+#                               "non-political news" = "#303C74"),
+#                      labels=c("political news","non-political news"),name="")+
+#   facet_grid(type~case,scales = "free_y") +
+#   theme_bw()+
+#   theme(legend.position = "none",
+#         panel.grid.minor = element_blank(),
+#         legend.text = element_text(family="sans", size = 20),
+#         axis.text.x = element_text(family="sans", size = 12),
+#         strip.text = element_text(face = "bold"),
+#         text = element_text(family="sans", size=16))+
+#   labs(x = "cutoff (in sec)",y = "")
+# 
+# ggsave("figures/network_densities.pdf",width=16,height=10)
