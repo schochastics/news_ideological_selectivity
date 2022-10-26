@@ -1138,9 +1138,9 @@ ggsave(paste0("figures/",platform,"_seg_score_comparison.pdf"),width=16,height=1
 ## diversity comparison ----  
 bind_rows(
   readRDS(paste0("processed_data/stats/",platform,"_simpson_diversity.RDS")) |> 
-            mutate(type="Simpson Diversity"),
+            mutate(type="Simpson's D"),
   readRDS(paste0("processed_data/stats/",platform,"_entropy.RDS")) |> 
-            mutate(type="Shanon Entropy")
+            mutate(type="Shannon's H")
 ) |> 
   pivot_longer(cols = c(non_political,political)) |> 
   mutate(name = ifelse(name=="political","political news","non-political news")) |> 
