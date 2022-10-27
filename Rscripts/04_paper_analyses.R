@@ -1162,6 +1162,350 @@ bind_rows(
 
 ggsave(paste0("figures/",platform,"_diversity_comparison.pdf"),width=16,height=10)
 
+## alt scores regression ----
+tidy_toplot <- tibble()
+bakshy <- fread("data/bakshy_top500.txt")
+bakshy[,domain := str_replace_all(domain,"www\\.","")]
+bakshy[,domain := fifelse(domain=="news.yahoo.com","news.yahoo.com/NEWS",domain)]
+bakshy[,domain := fifelse(domain=="news.msn.com", "msn.com/NEWS",domain)]
+bakshy[,domain := fifelse(domain=="aol.com", "aol.com/NEWS",domain)]
+bakshy[,domain := fifelse(domain=="huffingtonpost.com", "huffpost.com",domain)]
+bakshy[,domain := fifelse(domain=="westernjournalism.com", "westernjournal.com",domain)]
+bakshy <- bakshy[!domain%in%c("msn.com", "twitter.com", "amazon.com", "youtube.com")]
+bakshy <- bakshy[,c("domain","avg_align")]
+robertson_data <- fread("data/bias_scores.csv")
+
+survey_lm <- survey[country=="USA",.(panelist_id, leftright,  polinterest, extremism, age, female, edu, log_total_visits)]  
+survey_lm <- na.omit(survey_lm)
+survey_lm[, leftright := fcase(leftright < 6,-1,leftright == 6, 0, leftright > 6, 1)]
+
+lm_dt <- fread(paste0("processed_data/",platform,"/news_only/","us.csv"))
+lm_dt[ ,country := "USA"]
+lm_dt[,political:=ifelse(political=="","non-political",political)]
+lm_dt <- lm_dt[!is.na(duration)]
+lm_dt <- lm_dt[survey_lm, on = .(panelist_id)]
+keep <- lm_dt[,.(max_visit=max(duration,na.rm=TRUE)), by=.(panelist_id)][max_visit>=120][["panelist_id"]]
+lm_dt <- lm_dt[panelist_id%in%keep]
+overall_ideo <- mean(lm_dt[["leftright"]],na.rm = TRUE)
+
+lm_dt <- bakshy[lm_dt, on = .(domain)]
+lm_dt <- robertson_data[lm_dt, on = .(domain)]
+
+### present data ----
+non_pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="non-political" & duration >= x]
+  dat[,align := mean(leftright,na.rm = TRUE)-overall_ideo,by=c("domain")]
+  res <- lmer(align ~ 1  + as.factor(leftright) + prev_type + polinterest + age + female + 
+                as.factor(edu) + log_total_visits + (1|panelist_id), data = dat)
+  lmer_to_tidy(res) |> mutate(type = "non_political", threshold = x)
+})
+
+pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="political" & duration >= x]
+  dat[,align := mean(leftright,na.rm = TRUE)-overall_ideo,by=c("domain")]
+  res <- lmer(align ~ 1  + as.factor(leftright) + prev_type + polinterest + age + female + 
+                as.factor(edu) + log_total_visits + (1|panelist_id), data = dat)
+  lmer_to_tidy(res) |> mutate(type = "political", threshold = x)
+})
+
+tmp <- bind_rows(non_pol,pol) |> mutate(meta = "(A) Present data")
+tidy_toplot <- bind_rows(tidy_toplot,tmp)
+
+### Bakshy et al ----
+non_pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="non-political" & duration >= x]
+  res <- lmer(avg_align ~ 1  + as.factor(leftright) + prev_type + polinterest + age + female + 
+                as.factor(edu) + log_total_visits + (1|panelist_id), data = dat)
+  lmer_to_tidy(res) |> mutate(type = "non_political", threshold = x)
+})
+
+pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="political" & duration >= x]
+  res <- lmer(avg_align ~ 1  + as.factor(leftright) + prev_type + polinterest + age + female + 
+                as.factor(edu) + log_total_visits + (1|panelist_id), data = dat)
+  lmer_to_tidy(res) |> mutate(type = "political", threshold = x)
+})
+
+tmp <- bind_rows(non_pol,pol) |> mutate(meta = "(B) Bakshy et al. scores")
+tidy_toplot <- bind_rows(tidy_toplot,tmp)
+
+### Robertson et al. ----
+non_pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="non-political" & duration >= x]
+  res <- lmer(score ~ 1  + as.factor(leftright) + prev_type + polinterest + age + female + 
+                as.factor(edu) + log_total_visits + (1|panelist_id), data = dat)
+  lmer_to_tidy(res) |> mutate(type = "non_political", threshold = x)
+})
+
+pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="political" & duration >= x]
+  res <- lmer(score ~ 1  + as.factor(leftright) + prev_type + polinterest + age + female + 
+                as.factor(edu) + log_total_visits + (1|panelist_id), data = dat)
+  lmer_to_tidy(res) |> mutate(type = "political", threshold = x)
+})
+
+tmp <- bind_rows(non_pol,pol) |> mutate(meta = "(C) Robertson et al. scores")
+tidy_toplot <- bind_rows(tidy_toplot,tmp)
+
+### Budak et al. ----
+non_pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="non-political" & duration >= x]
+  dat[,budak_score := budak_score * 5]
+  res <- lmer(budak_score ~ 1  + as.factor(leftright) + prev_type + polinterest + age + female + 
+                as.factor(edu) + log_total_visits + (1|panelist_id), data = dat)
+  lmer_to_tidy(res) |> mutate(type = "non_political", threshold = x)
+})
+
+pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="political" & duration >= x]
+  dat[,budak_score := budak_score * 5]
+  res <- lmer(budak_score ~ 1  + as.factor(leftright) + prev_type + polinterest + age + female + 
+                as.factor(edu) + log_total_visits + (1|panelist_id), data = dat)
+  lmer_to_tidy(res) |> mutate(type = "political", threshold = x)
+})
+
+tmp <- bind_rows(non_pol,pol) |> mutate(meta = "(D) Budak et al. scores")
+tidy_toplot <- bind_rows(tidy_toplot,tmp)
+
+### AllSides scores ----
+non_pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="non-political" & duration >= x]
+  res <- lmer(allsides_score ~ 1  + as.factor(leftright) + prev_type + polinterest + age + female + 
+                as.factor(edu) + log_total_visits + (1|panelist_id), data = dat)
+  lmer_to_tidy(res) |> mutate(type = "non_political", threshold = x)
+})
+
+pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="political" & duration >= x]
+  res <- lmer(allsides_score ~ 1  + as.factor(leftright) + prev_type + polinterest + age + female + 
+                as.factor(edu) + log_total_visits + (1|panelist_id), data = dat)
+  lmer_to_tidy(res) |> mutate(type = "political", threshold = x)
+})
+
+tmp <- bind_rows(non_pol,pol) |> mutate(meta = "(F) AllSides controlled scores")
+tidy_toplot <- bind_rows(tidy_toplot,tmp)
+
+### Allsides community ----
+non_pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="non-political" & duration >= x]
+  res <- lmer(allsides_score_community ~ 1  + as.factor(leftright) + prev_type + polinterest + age + female + 
+                as.factor(edu) + log_total_visits + (1|panelist_id), data = dat)
+  lmer_to_tidy(res) |> mutate(type = "non_political", threshold = x)
+})
+
+pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="political" & duration >= x]
+  res <- lmer(allsides_score_community ~ 1  + as.factor(leftright) + prev_type + polinterest + age + female + 
+                as.factor(edu) + log_total_visits + (1|panelist_id), data = dat)
+  lmer_to_tidy(res) |> mutate(type = "political", threshold = x)
+})
+
+tmp <- bind_rows(non_pol,pol) |> mutate(meta = "(E) AllSides community scores")
+tidy_toplot <- bind_rows(tidy_toplot,tmp)
+write_csv(tidy_toplot,paste0("processed_data/regression/",platform,"_compare_other_scores.csv"))
+
+###Plotting ----
+tidy_to_plot <- read_csv(paste0("processed_data/regression/",platform,"_compare_other_scores.csv"))
+to_keep <- c("as.factor(leftright)1")
+
+tidy_toplot <- tidy_toplot  |>  
+  mutate(type = as.factor(type),
+         type = dplyr::recode_factor(type,
+                                     "non_political" = "Non-political News",
+                                     "political" = "Political News"))
+
+tidy_toplot |>  
+  filter((term %in% to_keep)) |>  
+  ggplot(aes(y = Estimate, x = factor(threshold))) +
+  geom_pointrange(
+    aes(ymin = CI_lower, ymax = CI_upper, color = type),
+    position = position_dodge(0.6)) +
+  scale_color_manual(values=c("Political News" = "#AA8939","Non-political News" = "#303C74"),
+                     labels=c("Political news","Non-political news"),name="")+
+  coord_flip() +
+  theme_bw() + 
+  facet_wrap(~meta)+
+  theme(axis.text = element_text(size = 10),
+        axis.title = element_text(size = 14),
+        strip.text = element_text(size = 12),
+        legend.position = "bottom",
+        legend.text = element_text(size=14)) +
+  labs(x="cutoff (in sec)")+
+  geom_hline(yintercept = 0, linetype = "dashed")
+
+ggsave(paste0("figures/",platform,"_compare_other_scores.pdf"), width = 10, height = 8)
+
+## alt scores partisanship ----
+### diversity ----
+non_pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="non-political" & duration >= x]
+  dat[,align := mean(leftright,na.rm = TRUE)-overall_ideo,by=c("domain")]
+  dat[, `:=`(ideo_cat_A = fcase(is.na(align),NA_real_,align < -.2,-1, align > .2,1, default = 0),
+             ideo_cat_B = fcase(is.na(avg_align),NA_real_,avg_align < -.2,-1, avg_align > .2,1, default = 0),
+             ideo_cat_C = fcase(is.na(score),NA_real_,score < -.2,-1, score > .2,1, default = 0),
+             ideo_cat_D = fcase(is.na(budak_score),NA_real_,budak_score < -.04,-1, budak_score > .04,1, default = 0),
+             ideo_cat_E = fcase(is.na(allsides_score_community),NA_real_,allsides_score_community < -.2,-1, allsides_score_community > .2,1, default = 0),
+             ideo_cat_F = fcase(is.na(allsides_score),NA_real_,allsides_score < -.2,-1, allsides_score > .2,1, default = 0))]
+  
+  datA1 <- dat[!is.na(ideo_cat_A),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_A)]
+  datB1 <- dat[!is.na(ideo_cat_B),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_B)]
+  datC1 <- dat[!is.na(ideo_cat_C),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_C)]
+  datD1 <- dat[!is.na(ideo_cat_D),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_D)]
+  datE1 <- dat[!is.na(ideo_cat_E),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_E)]
+  datF1 <- dat[!is.na(ideo_cat_F),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_F)]
+  
+  datA2 <- datA1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
+  datB2 <- datB1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
+  datC2 <- datC1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
+  datD2 <- datD1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
+  datE2 <- datE1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
+  datF2 <- datF1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
+  
+  tibble(
+    country = "USA",
+    cutoff = x,
+    type = "non-political",
+    score = c(1.5 * mean(datA2[["ideo_div"]],na.rm = TRUE),
+              1.5 * mean(datB2[["ideo_div"]],na.rm = TRUE),
+              1.5 * mean(datC2[["ideo_div"]],na.rm = TRUE),
+              1.5 * mean(datD2[["ideo_div"]],na.rm = TRUE),
+              1.5 * mean(datE2[["ideo_div"]],na.rm = TRUE),
+              1.5 * mean(datF2[["ideo_div"]],na.rm = TRUE)),
+    meta = c("(A) Present data", "(B) Bakshy et al. scores", "(C) Robertson et al. scores", 
+             "(D) Budak et al. scores", "(F) AllSides controlled scores", 
+             "(E) AllSides community scores") 
+  )
+  
+})
+
+pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="political" & duration >= x]
+  dat[,align := mean(leftright,na.rm = TRUE)-overall_ideo,by=c("domain")]
+  dat[, `:=`(ideo_cat_A = fcase(is.na(align),NA_real_,align < -.2,-1, align > .2,1, default = 0),
+             ideo_cat_B = fcase(is.na(avg_align),NA_real_,avg_align < -.2,-1, avg_align > .2,1, default = 0),
+             ideo_cat_C = fcase(is.na(score),NA_real_,score < -.2,-1, score > .2,1, default = 0),
+             ideo_cat_D = fcase(is.na(budak_score),NA_real_,budak_score < -.04,-1, budak_score > .04,1, default = 0),
+             ideo_cat_E = fcase(is.na(allsides_score_community),NA_real_,allsides_score_community < -.2,-1, allsides_score_community > .2,1, default = 0),
+             ideo_cat_F = fcase(is.na(allsides_score),NA_real_,allsides_score < -.2,-1, allsides_score > .2,1, default = 0))]
+  
+  datA1 <- dat[!is.na(ideo_cat_A),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_A)]
+  datB1 <- dat[!is.na(ideo_cat_B),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_B)]
+  datC1 <- dat[!is.na(ideo_cat_C),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_C)]
+  datD1 <- dat[!is.na(ideo_cat_D),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_D)]
+  datE1 <- dat[!is.na(ideo_cat_E),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_E)]
+  datF1 <- dat[!is.na(ideo_cat_F),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_F)]
+  
+  datA2 <- datA1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
+  datB2 <- datB1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
+  datC2 <- datC1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
+  datD2 <- datD1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
+  datE2 <- datE1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
+  datF2 <- datF1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
+  
+  tibble(
+    country = "USA",
+    cutoff = x,
+    type = "political",
+    score = c(1.5 * mean(datA2[["ideo_div"]],na.rm = TRUE),
+              1.5 * mean(datB2[["ideo_div"]],na.rm = TRUE),
+              1.5 * mean(datC2[["ideo_div"]],na.rm = TRUE),
+              1.5 * mean(datD2[["ideo_div"]],na.rm = TRUE),
+              1.5 * mean(datE2[["ideo_div"]],na.rm = TRUE),
+              1.5 * mean(datF2[["ideo_div"]],na.rm = TRUE)),
+    meta = c("(A) Present data", "(B) Bakshy et al. scores", "(C) Robertson et al. scores", 
+             "(D) Budak et al. scores", "(F) AllSides controlled scores", 
+             "(E) AllSides community scores") 
+  )
+  
+})
+
+sum_stat_int <- bind_rows(non_pol,pol) |> mutate(meta2 = "(A) News Diet Diversity")
+write_csv(sum_stat_int,paste0("processed_data/stats/",platform,"_diversity_other_scores.csv"))
+
+
+### partisanship ----
+non_pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="non-political" & duration >= x]
+  dat[,align := mean(leftright,na.rm = TRUE)-overall_ideo,by=c("domain")]
+  dat <- dat[,.(diet_slant_A = mean(align,na.rm = TRUE),
+         diet_slant_B = mean(avg_align,na.rm = TRUE),
+         diet_slant_C = mean(score,na.rm = TRUE),
+         diet_slant_D = mean(5 * budak_score,na.rm = TRUE),
+         diet_slant_E = mean(allsides_score_community,na.rm = TRUE),
+         diet_slant_F = mean(allsides_score,na.rm = TRUE)),by=.(panelist_id)]
+  tibble(
+    country = "USA",
+    cutoff = x,
+    type = "non-political",
+    score = c(mean(abs(dat$diet_slant_A),na.rm = TRUE),
+      mean(abs(dat$diet_slant_B),na.rm = TRUE),
+      mean(abs(dat$diet_slant_C),na.rm = TRUE),
+      mean(abs(dat$diet_slant_D),na.rm = TRUE),
+      mean(abs(dat$diet_slant_E),na.rm = TRUE),
+      mean(abs(dat$diet_slant_F),na.rm = TRUE)),
+    meta = c("(A) Present data", "(B) Bakshy et al. scores", "(C) Robertson et al. scores", 
+             "(D) Budak et al. scores", "(F) AllSides controlled scores", 
+             "(E) AllSides community scores") 
+  )
+})
+
+pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="political" & duration >= x]
+  dat[,align := mean(leftright,na.rm = TRUE)-overall_ideo,by=c("domain")]
+  dat <- dat[,.(diet_slant_A = mean(align,na.rm = TRUE),
+                diet_slant_B = mean(avg_align,na.rm = TRUE),
+                diet_slant_C = mean(score,na.rm = TRUE),
+                diet_slant_D = mean(5 * budak_score,na.rm = TRUE),
+                diet_slant_E = mean(allsides_score_community,na.rm = TRUE),
+                diet_slant_F = mean(allsides_score,na.rm = TRUE)),by=.(panelist_id)]
+  tibble(
+    country = "USA",
+    cutoff = x,
+    type = "political",
+    score = c(mean(abs(dat$diet_slant_A),na.rm = TRUE),
+              mean(abs(dat$diet_slant_B),na.rm = TRUE),
+              mean(abs(dat$diet_slant_C),na.rm = TRUE),
+              mean(abs(dat$diet_slant_D),na.rm = TRUE),
+              mean(abs(dat$diet_slant_E),na.rm = TRUE),
+              mean(abs(dat$diet_slant_F),na.rm = TRUE)),
+    meta = c("(A) Present data", "(B) Bakshy et al. scores", "(C) Robertson et al. scores", 
+             "(D) Budak et al. scores", "(F) AllSides controlled scores", 
+             "(E) AllSides community scores") 
+  )
+})
+
+sum_stat_int <- bind_rows(non_pol,pol) |> mutate(meta2 = "(B) Partisanship in News Diets")
+write_csv(sum_stat_int,paste0("processed_data/stats/",platform,"_partisan_other_scores.csv"))
+
+### plotting ----
+sum_stat_partisan <- read_csv(paste0("processed_data/stats/",platform,"_partisan_other_scores.csv"))
+sum_stat_diverse  <- read_csv(paste0("processed_data/stats/",platform,"_diversity_other_scores.csv"))
+
+summary_scores <- bind_rows(sum_stat_diverse, sum_stat_partisan) |> 
+  mutate(type = as.factor(type),
+         type = dplyr::recode_factor(type,
+                                     "non-political" = "Non-political News",
+                                     "political" = "Political News"))
+
+
+ggplot(summary_scores,aes(y = score, x = factor(cutoff))) +
+  geom_point(
+    aes(color = type)) +
+  scale_color_manual(values=c("Political News" = "#AA8939","Non-political News" = "#303C74"),
+                     labels=c("Political news","Non-political news"),name="")+
+  theme_bw() + 
+  facet_grid(meta2~meta, scales = "free_y") +
+  theme(axis.text = element_text(size = 10),
+        axis.title = element_text(size = 14),
+        legend.position = "bottom",
+        strip.text = element_text(size=12),
+        legend.text = element_text(size=14)) +
+  ylim(0, .6)+
+  labs(x="cutoff (in sec)",y= "scores")
+
+ggsave(paste0("figures/",platform,"_divpart_other_scores.pdf"), width = 15, height = 10)
+
+
 # ## networks ----#
 # source("Rscripts/helpers.R")
 # library(igraph)
