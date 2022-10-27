@@ -23,6 +23,22 @@ lmer_to_tidy <- function(res) {
   return(res)
 }
 
+combine_results <- function(non_pol,pol){
+  do.call("rbind",non_pol) |> 
+    as_tibble() |> 
+    mutate(cutoff=cutoffs,type="non_political") |> 
+    bind_rows(
+      do.call("rbind",pol) |> 
+        as_tibble() |> 
+        mutate(cutoff=cutoffs,type="political")
+    ) |> 
+    pivot_longer(all_of(fl)) |> 
+    pivot_wider(names_from = type) |> 
+    mutate(case=str_extract(name,"^[a-z]{2}"))|> 
+    mutate(case=long_cases[match(case,short_cases)]) |>
+    select(-name)
+}
+
 ##----------------------------------------------------------------------------##
 # Overall news descriptives ----
 ##----------------------------------------------------------------------------##
@@ -81,22 +97,6 @@ ggsave(paste0("figures/",platform,"_figure1.pdf"),p,width=10,height=4)
 ##----------------------------------------------------------------------------##
 # Comparison pol/nonpol ----
 ##----------------------------------------------------------------------------##
-combine_results <- function(non_pol,pol){
-  do.call("rbind",non_pol) |> 
-    as_tibble() |> 
-    mutate(cutoff=cutoffs,type="non_political") |> 
-    bind_rows(
-      do.call("rbind",pol) |> 
-        as_tibble() |> 
-        mutate(cutoff=cutoffs,type="political")
-    ) |> 
-    pivot_longer(all_of(fl)) |> 
-    pivot_wider(names_from = type) |> 
-    mutate(case=str_extract(name,"^[a-z]{2}"))|> 
-    mutate(case=long_cases[match(case,short_cases)]) |>
-    select(-name)
-}
-
 # Segregation score ----
 # Operational decisions:
 #   - based on unique visitors
@@ -1163,6 +1163,63 @@ bind_rows(
 
 ggsave(paste0("figures/",platform,"_diversity_comparison.pdf"),width=16,height=10)
 
+##news diet slant comparison ----
+non_pol <- lapply(cutoffs,function(y) {
+  sapply(fl,function(x){
+    dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
+    dt[survey, on = .(panelist_id), leftright := leftright]
+    dt <- dt[!is.na(leftright)]
+    dt[,`:=`(leftright=fcase(leftright < 6,-1,leftright > 6,1,default = 0))]
+    mean_ideo <- mean(unique(dt[,.(panelist_id,leftright)])[["leftright"]])
+    
+    dt <- dt[political=="" & duration>=y]
+    
+    dom_align <- dt[,.(align=mean(leftright,na.rm=TRUE)),by = .(domain)]
+    mean(abs(dom_align[["align"]]-mean_ideo))
+  })
+})
+
+pol <- lapply(cutoffs,function(y) {
+  sapply(fl,function(x){
+    dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
+    dt[survey, on = .(panelist_id), leftright := leftright]
+    dt <- dt[!is.na(leftright)]
+    dt[,`:=`(leftright=fcase(leftright < 6,-1,leftright > 6,1,default = 0))]
+    mean_ideo <- mean(unique(dt[,.(panelist_id,leftright)])[["leftright"]])
+    
+    dt <- dt[political=="political" & duration>=y]
+    
+    dom_align <- dt[,.(align=mean(leftright,na.rm=TRUE)),by = .(domain)]
+    mean(abs(dom_align[["align"]]-mean_ideo))
+  })
+})
+
+combine_results(non_pol,pol) |> 
+  saveRDS(paste0("processed_data/stats/",platform,"_news_diet_slant_fletcher.RDS"))
+
+flaxman  <- readRDS(paste0("processed_data/stats/",platform,"_news_diet_slant.RDS")) |> 
+  mutate(meta="(A) Flaxman et al.")
+fletcher <- readRDS(paste0("processed_data/stats/",platform,"_news_diet_slant_fletcher.RDS")) |> 
+  mutate(meta="(B) Fletcher et al.")
+
+bind_rows(flaxman,fletcher) |> 
+  pivot_longer(non_political:political,names_to = "type",values_to = "score") |> 
+  ggplot(aes(x=factor(cutoff),y=score,col=type))+
+  geom_point()+
+  scale_color_manual(values=c("political" = "#AA8939","non-political" = "#303C74"),
+                     labels=c("Political news","Non-political news"),name="")+
+  theme_bw() + 
+  theme(legend.position = "none",
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(family="sans", size = 20),
+        axis.text.x = element_text(family="sans", size = 12),
+        strip.text = element_text(face = "bold"),
+        text = element_text(family="sans", size=16))+
+  labs(x = "cutoff (in sec)",y = "")+
+  facet_grid(meta~case,scales = "free_y")
+
+ggsave(paste0("figures/",platform,"_diet_slant_comparison.pdf"),width=15,height=8)
+
 ## alt scores regression ----
 
 bakshy <- fread("data/bakshy_top500.txt")
@@ -1577,6 +1634,7 @@ ggsave(paste0("figures/",platform,"_divpart_other_scores.pdf"), width = 15, heig
 #prevalences ----
 system("Rscripts/freq_count.sh")
 
+## news proportion all visits ----
 fl <- list.files("processed_data/stats",patter="type_freq",full.names = TRUE)
 map_dfr(fl,function(f){
   df <- read_csv(f,show_col_types = FALSE)
@@ -1588,6 +1646,58 @@ map_dfr(fl,function(f){
   mutate(frac=round(news/all*100,2),all=format(all,big.mark=",")) |> 
   select(country,all,news=frac) |> 
   knitr::kable(format="latex",booktabs=TRUE)
+
+# news visits per visitor ----
+fl <- list.files(paste0("processed_data/",platform,"/news_only"),pattern = "csv")
+non_pol <- map_dfr(cutoffs,function(y) {
+  map_dfr(fl,function(x){
+    dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
+    dt <- dt[political=="" & duration>=y]
+    dt1 <- dt[,.(count=.N),by=.(panelist_id)]
+    tibble(
+      country = long_cases[short_cases==str_sub(x,1,2)],
+      cutoff = y,
+      value = mean(dt1[["count"]],na.rm=TRUE),
+      type = "non-political"
+    )
+  })
+})
+
+pol <- map_dfr(cutoffs,function(y) {
+  map_dfr(fl,function(x){
+    dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
+    dt <- dt[political=="political" & duration>=y]
+    dt1 <- dt[,.(count=.N),by=.(panelist_id)]
+    tibble(
+      country = long_cases[short_cases==str_sub(x,1,2)],
+      cutoff = y,
+      value = mean(dt1[["count"]],na.rm=TRUE),
+      type = "political"
+    )
+  })
+})
+
+write_csv(bind_rows(non_pol,pol),paste0("processed_data/stats/",platform,"_avg_visits_news.csv"))
+
+## Plotting
+dat <- read_csv(paste0("processed_data/stats/",platform,"_avg_visits_news.csv"))
+
+ggplot(dat,aes(x=factor(cutoff),y=value,col=type))+
+  geom_point(size = 1.5)+
+  scale_color_manual(values=c("political" = "#AA8939","non-political" = "#303C74"),
+                     labels=c("Political news","Non-political news"),name="")+
+  theme_bw() + 
+  theme(axis.text = element_text(size = 10),
+        axis.title = element_text(size = 14),
+        strip.text = element_text(size = 12),
+        legend.position = "bottom",
+        legend.text = element_text(size=14)) +
+  labs(x="cutoff (in sec)",y="average visits per user")+
+  facet_wrap(country~.,scales="free_y")
+
+ggsave(paste0("figures/",platform,"_avg_visits_news.pdf"),width=9,height=6)
+
+
 # ## networks ----#
 # source("Rscripts/helpers.R")
 # library(igraph)
@@ -1642,3 +1752,4 @@ map_dfr(fl,function(f){
 #   labs(x = "cutoff (in sec)",y = "")
 # 
 # ggsave("figures/network_densities.pdf",width=16,height=10)
+
