@@ -14,6 +14,15 @@ short_cases <- c("de","es","fr","it","uk","us")
 long_cases <- c("Germany","Spain","France","Italy","United Kingdom","USA")
 survey <- as.data.table(readRDS("data/survey_data_r.rds"))
 fixN <- TRUE
+
+# some helper function to get the regression estimates into the graphs
+lmer_to_tidy <- function(res) {
+  res <- summary(res) |> coef() |> as_tibble(rownames = "term")
+  res$CI_lower <- res$Estimate - 1.96 * res$`Std. Error`
+  res$CI_upper <- res$Estimate + 1.96 * res$`Std. Error`
+  return(res)
+}
+
 ##----------------------------------------------------------------------------##
 # Overall news descriptives ----
 ##----------------------------------------------------------------------------##
@@ -420,14 +429,6 @@ ggsave(paste0("figures/",platform,"_figure2.pdf"),width=16,height=10)
 
 
 # Prepare Regression Data ----
-# some helper function to get the regression estimates into the graphs
-lmer_to_tidy <- function(res) {
-  res <- summary(res) |> coef() |> as_tibble(rownames = "term")
-  res$CI_lower <- res$Estimate - 1.96 * res$`Std. Error`
-  res$CI_upper <- res$Estimate + 1.96 * res$`Std. Error`
-  return(res)
-}
-
 # prepare Data
 survey_lm <- survey[,.(panelist_id, leftright,  polinterest, extremism, age, female, edu, log_total_visits)]  
 survey_lm <- na.omit(survey_lm)
@@ -1163,7 +1164,7 @@ bind_rows(
 ggsave(paste0("figures/",platform,"_diversity_comparison.pdf"),width=16,height=10)
 
 ## alt scores regression ----
-tidy_toplot <- tibble()
+
 bakshy <- fread("data/bakshy_top500.txt")
 bakshy[,domain := str_replace_all(domain,"www\\.","")]
 bakshy[,domain := fifelse(domain=="news.yahoo.com","news.yahoo.com/NEWS",domain)]
@@ -1190,7 +1191,7 @@ overall_ideo <- mean(lm_dt[["leftright"]],na.rm = TRUE)
 
 lm_dt <- bakshy[lm_dt, on = .(domain)]
 lm_dt <- robertson_data[lm_dt, on = .(domain)]
-
+tidy_toplot <- tibble()
 ### present data ----
 non_pol <- map_dfr(cutoffs,function(x){
   dat <- lm_dt[political=="non-political" & duration >= x]
@@ -1302,10 +1303,50 @@ pol <- map_dfr(cutoffs,function(x){
 
 tmp <- bind_rows(non_pol,pol) |> mutate(meta = "(E) AllSides community scores")
 tidy_toplot <- bind_rows(tidy_toplot,tmp)
+
+### PEW ----
+non_pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="non-political" & duration >= x]
+  dat[,pew_score := pew_score * 2.5]
+  res <- lmer(pew_score ~ 1  + as.factor(leftright) + prev_type + polinterest + age + female + 
+                as.factor(edu) + log_total_visits + (1|panelist_id), data = dat)
+  lmer_to_tidy(res) |> mutate(type = "non_political", threshold = x)
+})
+
+pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="political" & duration >= x]
+  dat[,pew_score := pew_score * 2.5]
+  res <- lmer(pew_score ~ 1  + as.factor(leftright) + prev_type + polinterest + age + female + 
+                as.factor(edu) + log_total_visits + (1|panelist_id), data = dat)
+  lmer_to_tidy(res) |> mutate(type = "political", threshold = x)
+})
+
+tmp <- bind_rows(non_pol,pol) |> mutate(meta = "(G) PEW scores")
+tidy_toplot <- bind_rows(tidy_toplot,tmp)
+
+
+### MTURK scores ----
+non_pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="non-political" & duration >= x]
+  res <- lmer(mturk_score ~ 1  + as.factor(leftright) + prev_type + polinterest + age + female + 
+                as.factor(edu) + log_total_visits + (1|panelist_id), data = dat)
+  lmer_to_tidy(res) |> mutate(type = "non_political", threshold = x)
+})
+
+pol <- map_dfr(cutoffs,function(x){
+  dat <- lm_dt[political=="political" & duration >= x]
+  res <- lmer(mturk_score ~ 1  + as.factor(leftright) + prev_type + polinterest + age + female + 
+                as.factor(edu) + log_total_visits + (1|panelist_id), data = dat)
+  lmer_to_tidy(res) |> mutate(type = "political", threshold = x)
+})
+
+tmp <- bind_rows(non_pol,pol) |> mutate(meta = "(H) MTurk scores")
+tidy_toplot <- bind_rows(tidy_toplot,tmp)
+
 write_csv(tidy_toplot,paste0("processed_data/regression/",platform,"_compare_other_scores.csv"))
 
 ###Plotting ----
-tidy_to_plot <- read_csv(paste0("processed_data/regression/",platform,"_compare_other_scores.csv"))
+tidy_toplot <- read_csv(paste0("processed_data/regression/",platform,"_compare_other_scores.csv"))
 to_keep <- c("as.factor(leftright)1")
 
 tidy_toplot <- tidy_toplot  |>  
@@ -1324,7 +1365,7 @@ tidy_toplot |>
                      labels=c("Political news","Non-political news"),name="")+
   coord_flip() +
   theme_bw() + 
-  facet_wrap(~meta)+
+  facet_wrap(~meta,scales = "free_x",nrow=2)+
   theme(axis.text = element_text(size = 10),
         axis.title = element_text(size = 14),
         strip.text = element_text(size = 12),
@@ -1333,7 +1374,7 @@ tidy_toplot |>
   labs(x="cutoff (in sec)")+
   geom_hline(yintercept = 0, linetype = "dashed")
 
-ggsave(paste0("figures/",platform,"_compare_other_scores.pdf"), width = 10, height = 8)
+ggsave(paste0("figures/",platform,"_compare_other_scores.pdf"), width = 12, height = 8)
 
 ## alt scores partisanship ----
 ### diversity ----
@@ -1345,7 +1386,9 @@ non_pol <- map_dfr(cutoffs,function(x){
              ideo_cat_C = fcase(is.na(score),NA_real_,score < -.2,-1, score > .2,1, default = 0),
              ideo_cat_D = fcase(is.na(budak_score),NA_real_,budak_score < -.04,-1, budak_score > .04,1, default = 0),
              ideo_cat_E = fcase(is.na(allsides_score_community),NA_real_,allsides_score_community < -.2,-1, allsides_score_community > .2,1, default = 0),
-             ideo_cat_F = fcase(is.na(allsides_score),NA_real_,allsides_score < -.2,-1, allsides_score > .2,1, default = 0))]
+             ideo_cat_F = fcase(is.na(allsides_score),NA_real_,allsides_score < -.2,-1, allsides_score > .2,1, default = 0),
+             ideo_cat_G = fcase(is.na(pew_score),NA_real_,pew_score < -.2/2.5,-1, pew_score > .2/2.5,1, default = 0),
+             ideo_cat_H = fcase(is.na(mturk_score),NA_real_,mturk_score < -.2,-1, mturk_score > .2,1, default = 0))]
   
   datA1 <- dat[!is.na(ideo_cat_A),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_A)]
   datB1 <- dat[!is.na(ideo_cat_B),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_B)]
@@ -1353,6 +1396,8 @@ non_pol <- map_dfr(cutoffs,function(x){
   datD1 <- dat[!is.na(ideo_cat_D),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_D)]
   datE1 <- dat[!is.na(ideo_cat_E),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_E)]
   datF1 <- dat[!is.na(ideo_cat_F),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_F)]
+  datG1 <- dat[!is.na(ideo_cat_G),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_G)]
+  datH1 <- dat[!is.na(ideo_cat_H),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_H)]
   
   datA2 <- datA1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
   datB2 <- datB1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
@@ -1360,6 +1405,8 @@ non_pol <- map_dfr(cutoffs,function(x){
   datD2 <- datD1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
   datE2 <- datE1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
   datF2 <- datF1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
+  datG2 <- datG1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
+  datH2 <- datH1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
   
   tibble(
     country = "USA",
@@ -1370,10 +1417,13 @@ non_pol <- map_dfr(cutoffs,function(x){
               1.5 * mean(datC2[["ideo_div"]],na.rm = TRUE),
               1.5 * mean(datD2[["ideo_div"]],na.rm = TRUE),
               1.5 * mean(datE2[["ideo_div"]],na.rm = TRUE),
-              1.5 * mean(datF2[["ideo_div"]],na.rm = TRUE)),
+              1.5 * mean(datF2[["ideo_div"]],na.rm = TRUE),
+              1.5 * mean(datG2[["ideo_div"]],na.rm = TRUE),
+              1.5 * mean(datH2[["ideo_div"]],na.rm = TRUE)),
     meta = c("(A) Present data", "(B) Bakshy et al. scores", "(C) Robertson et al. scores", 
-             "(D) Budak et al. scores", "(F) AllSides controlled scores", 
-             "(E) AllSides community scores") 
+             "(D) Budak et al. scores", "(E) AllSides community scores",
+             "(F) AllSides controlled scores", "(G) PEW scores","(H) MTurk scores"
+             ) 
   )
   
 })
@@ -1386,7 +1436,9 @@ pol <- map_dfr(cutoffs,function(x){
              ideo_cat_C = fcase(is.na(score),NA_real_,score < -.2,-1, score > .2,1, default = 0),
              ideo_cat_D = fcase(is.na(budak_score),NA_real_,budak_score < -.04,-1, budak_score > .04,1, default = 0),
              ideo_cat_E = fcase(is.na(allsides_score_community),NA_real_,allsides_score_community < -.2,-1, allsides_score_community > .2,1, default = 0),
-             ideo_cat_F = fcase(is.na(allsides_score),NA_real_,allsides_score < -.2,-1, allsides_score > .2,1, default = 0))]
+             ideo_cat_F = fcase(is.na(allsides_score),NA_real_,allsides_score < -.2,-1, allsides_score > .2,1, default = 0),
+             ideo_cat_G = fcase(is.na(pew_score),NA_real_,pew_score < -.2/2.5,-1, pew_score > .2/2.5,1, default = 0),
+             ideo_cat_H = fcase(is.na(mturk_score),NA_real_,mturk_score < -.2,-1, mturk_score > .2,1, default = 0))]
   
   datA1 <- dat[!is.na(ideo_cat_A),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_A)]
   datB1 <- dat[!is.na(ideo_cat_B),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_B)]
@@ -1394,6 +1446,8 @@ pol <- map_dfr(cutoffs,function(x){
   datD1 <- dat[!is.na(ideo_cat_D),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_D)]
   datE1 <- dat[!is.na(ideo_cat_E),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_E)]
   datF1 <- dat[!is.na(ideo_cat_F),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_F)]
+  datG1 <- dat[!is.na(ideo_cat_G),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_G)]
+  datH1 <- dat[!is.na(ideo_cat_H),.(visit_by_ideo=.N), by = .(panelist_id,ideo_cat_H)]
   
   datA2 <- datA1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
   datB2 <- datB1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
@@ -1401,6 +1455,8 @@ pol <- map_dfr(cutoffs,function(x){
   datD2 <- datD1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
   datE2 <- datE1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
   datF2 <- datF1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
+  datG2 <- datG1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
+  datH2 <- datH1[,.(ideo_div = vegan::diversity(visit_by_ideo,index = "simpson")), by = .(panelist_id)]
   
   tibble(
     country = "USA",
@@ -1411,16 +1467,19 @@ pol <- map_dfr(cutoffs,function(x){
               1.5 * mean(datC2[["ideo_div"]],na.rm = TRUE),
               1.5 * mean(datD2[["ideo_div"]],na.rm = TRUE),
               1.5 * mean(datE2[["ideo_div"]],na.rm = TRUE),
-              1.5 * mean(datF2[["ideo_div"]],na.rm = TRUE)),
+              1.5 * mean(datF2[["ideo_div"]],na.rm = TRUE),
+              1.5 * mean(datG2[["ideo_div"]],na.rm = TRUE),
+              1.5 * mean(datH2[["ideo_div"]],na.rm = TRUE)),
     meta = c("(A) Present data", "(B) Bakshy et al. scores", "(C) Robertson et al. scores", 
-             "(D) Budak et al. scores", "(F) AllSides controlled scores", 
-             "(E) AllSides community scores") 
+             "(D) Budak et al. scores", "(E) AllSides community scores",
+             "(F) AllSides controlled scores", "(G) PEW scores","(H) MTurk scores"
+    ) 
   )
   
 })
 
 sum_stat_int <- bind_rows(non_pol,pol) |> mutate(meta2 = "(A) News Diet Diversity")
-write_csv(sum_stat_int,paste0("processed_data/stats/",platform,"_diversity_other_scores.csv"))
+saveRDS(sum_stat_int,paste0("processed_data/stats/",platform,"_diversity_other_scores.RDS"))
 
 
 ### partisanship ----
@@ -1432,7 +1491,10 @@ non_pol <- map_dfr(cutoffs,function(x){
          diet_slant_C = mean(score,na.rm = TRUE),
          diet_slant_D = mean(5 * budak_score,na.rm = TRUE),
          diet_slant_E = mean(allsides_score_community,na.rm = TRUE),
-         diet_slant_F = mean(allsides_score,na.rm = TRUE)),by=.(panelist_id)]
+         diet_slant_F = mean(allsides_score,na.rm = TRUE),
+         diet_slant_G = mean(2.5 * pew_score,na.rm = TRUE),
+         diet_slant_H = mean(mturk_score,na.rm = TRUE)),
+         by=.(panelist_id)]
   tibble(
     country = "USA",
     cutoff = x,
@@ -1442,10 +1504,12 @@ non_pol <- map_dfr(cutoffs,function(x){
       mean(abs(dat$diet_slant_C),na.rm = TRUE),
       mean(abs(dat$diet_slant_D),na.rm = TRUE),
       mean(abs(dat$diet_slant_E),na.rm = TRUE),
-      mean(abs(dat$diet_slant_F),na.rm = TRUE)),
+      mean(abs(dat$diet_slant_F),na.rm = TRUE),
+      mean(abs(dat$diet_slant_G),na.rm = TRUE),
+      mean(abs(dat$diet_slant_H),na.rm = TRUE)),
     meta = c("(A) Present data", "(B) Bakshy et al. scores", "(C) Robertson et al. scores", 
-             "(D) Budak et al. scores", "(F) AllSides controlled scores", 
-             "(E) AllSides community scores") 
+             "(D) Budak et al. scores", "(E) AllSides community scores",
+             "(F) AllSides controlled scores", "(G) PEW scores", "(H) MTurk scores") 
   )
 })
 
@@ -1457,7 +1521,10 @@ pol <- map_dfr(cutoffs,function(x){
                 diet_slant_C = mean(score,na.rm = TRUE),
                 diet_slant_D = mean(5 * budak_score,na.rm = TRUE),
                 diet_slant_E = mean(allsides_score_community,na.rm = TRUE),
-                diet_slant_F = mean(allsides_score,na.rm = TRUE)),by=.(panelist_id)]
+                diet_slant_F = mean(allsides_score,na.rm = TRUE),
+                diet_slant_G = mean(2.5 * pew_score,na.rm = TRUE),
+                diet_slant_H = mean(mturk_score,na.rm = TRUE)),
+             by=.(panelist_id)]
   tibble(
     country = "USA",
     cutoff = x,
@@ -1467,19 +1534,21 @@ pol <- map_dfr(cutoffs,function(x){
               mean(abs(dat$diet_slant_C),na.rm = TRUE),
               mean(abs(dat$diet_slant_D),na.rm = TRUE),
               mean(abs(dat$diet_slant_E),na.rm = TRUE),
-              mean(abs(dat$diet_slant_F),na.rm = TRUE)),
+              mean(abs(dat$diet_slant_F),na.rm = TRUE),
+              mean(abs(dat$diet_slant_G),na.rm = TRUE),
+              mean(abs(dat$diet_slant_H),na.rm = TRUE)),
     meta = c("(A) Present data", "(B) Bakshy et al. scores", "(C) Robertson et al. scores", 
-             "(D) Budak et al. scores", "(F) AllSides controlled scores", 
-             "(E) AllSides community scores") 
+             "(D) Budak et al. scores", "(E) AllSides community scores",
+             "(F) AllSides controlled scores", "(G) PEW scores", "(H) MTurk scores") 
   )
 })
 
 sum_stat_int <- bind_rows(non_pol,pol) |> mutate(meta2 = "(B) Partisanship in News Diets")
-write_csv(sum_stat_int,paste0("processed_data/stats/",platform,"_partisan_other_scores.csv"))
+saveRDS(sum_stat_int,paste0("processed_data/stats/",platform,"_partisan_other_scores.RDS"))
 
 ### plotting ----
-sum_stat_partisan <- read_csv(paste0("processed_data/stats/",platform,"_partisan_other_scores.csv"))
-sum_stat_diverse  <- read_csv(paste0("processed_data/stats/",platform,"_diversity_other_scores.csv"))
+sum_stat_partisan <- readRDS(paste0("processed_data/stats/",platform,"_partisan_other_scores.RDS"))
+sum_stat_diverse  <- readRDS(paste0("processed_data/stats/",platform,"_diversity_other_scores.RDS"))
 
 summary_scores <- bind_rows(sum_stat_diverse, sum_stat_partisan) |> 
   mutate(type = as.factor(type),
@@ -1505,7 +1574,20 @@ ggplot(summary_scores,aes(y = score, x = factor(cutoff))) +
 
 ggsave(paste0("figures/",platform,"_divpart_other_scores.pdf"), width = 15, height = 10)
 
+#prevalences ----
+system("Rscripts/freq_count.sh")
 
+fl <- list.files("processed_data/stats",patter="type_freq",full.names = TRUE)
+map_dfr(fl,function(f){
+  df <- read_csv(f,show_col_types = FALSE)
+  df$country <- long_cases[which(fl==f)]
+  df
+}) |> 
+  group_by(country) |> 
+  dplyr::summarise(news=count[value=="news"],all=sum(count)) |> 
+  mutate(frac=round(news/all*100,2),all=format(all,big.mark=",")) |> 
+  select(country,all,news=frac) |> 
+  knitr::kable(format="latex",booktabs=TRUE)
 # ## networks ----#
 # source("Rscripts/helpers.R")
 # library(igraph)
