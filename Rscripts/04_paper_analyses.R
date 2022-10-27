@@ -1175,7 +1175,9 @@ non_pol <- lapply(cutoffs,function(y) {
     dt <- dt[political=="" & duration>=y]
     
     dom_align <- dt[,.(align=mean(leftright,na.rm=TRUE)),by = .(domain)]
-    mean(abs(dom_align[["align"]]-mean_ideo))
+    dt[dom_align, on = .(domain), dom_align:= align]
+    dt1 <- dt[,.(diet_slant=mean(dom_align,na.rm = TRUE)), by = .(panelist_id)]
+    mean(abs(dt1[["diet_slant"]]-mean_ideo))
   })
 })
 
@@ -1190,7 +1192,9 @@ pol <- lapply(cutoffs,function(y) {
     dt <- dt[political=="political" & duration>=y]
     
     dom_align <- dt[,.(align=mean(leftright,na.rm=TRUE)),by = .(domain)]
-    mean(abs(dom_align[["align"]]-mean_ideo))
+    dt[dom_align, on = .(domain), dom_align:= align]
+    dt1 <- dt[,.(diet_slant=mean(dom_align,na.rm = TRUE)), by = .(panelist_id)]
+    mean(abs(dt1[["diet_slant"]]-mean_ideo))
   })
 })
 
