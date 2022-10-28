@@ -1210,10 +1210,10 @@ bind_rows(flaxman,fletcher) |>
   pivot_longer(non_political:political,names_to = "type",values_to = "score") |> 
   ggplot(aes(x=factor(cutoff),y=score,col=type))+
   geom_point()+
-  scale_color_manual(values=c("political" = "#AA8939","non-political" = "#303C74"),
+  scale_color_manual(values=c("political" = "#AA8939","non_political" = "#303C74"),
                      labels=c("Political news","Non-political news"),name="")+
   theme_bw() + 
-  theme(legend.position = "none",
+  theme(legend.position = "bottom",
         panel.grid.minor = element_blank(),
         legend.text = element_text(family="sans", size = 20),
         axis.text.x = element_text(family="sans", size = 12),
