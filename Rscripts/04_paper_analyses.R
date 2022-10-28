@@ -1225,7 +1225,7 @@ bind_rows(flaxman,fletcher) |>
 ggsave(paste0("figures/",platform,"_diet_slant_comparison.pdf"),width=15,height=8)
 
 ## alt scores regression ----
-
+###prepare data ----
 bakshy <- fread("data/bakshy_top500.txt")
 bakshy[,domain := str_replace_all(domain,"www\\.","")]
 bakshy[,domain := fifelse(domain=="news.yahoo.com","news.yahoo.com/NEWS",domain)]
@@ -1544,60 +1544,92 @@ saveRDS(sum_stat_int,paste0("processed_data/stats/",platform,"_diversity_other_s
 
 
 ### partisanship ----
-non_pol <- map_dfr(cutoffs,function(x){
-  dat <- lm_dt[political=="non-political" & duration >= x]
-  dat[,align := mean(leftright,na.rm = TRUE)-overall_ideo,by=c("domain")]
-  dat <- dat[,.(diet_slant_A = mean(align,na.rm = TRUE),
-         diet_slant_B = mean(avg_align,na.rm = TRUE),
-         diet_slant_C = mean(score,na.rm = TRUE),
-         diet_slant_D = mean(5 * budak_score,na.rm = TRUE),
-         diet_slant_E = mean(allsides_score_community,na.rm = TRUE),
-         diet_slant_F = mean(allsides_score,na.rm = TRUE),
-         diet_slant_G = mean(2.5 * pew_score,na.rm = TRUE),
-         diet_slant_H = mean(mturk_score,na.rm = TRUE)),
-         by=.(panelist_id)]
+non_pol <- map_dfr(cutoffs,function(y){
+  dat <- lm_dt
+  if(fixN){
+    peeps <- dat[duration>=120]
+    peeps <- unique(peeps[["panelist_id"]])
+    dat <- dat[panelist_id%in%peeps]
+  }
+  dat <- dat[political=="non-political" & duration>=y]
+  dom_align <- dat[,.(align_A = mean(leftright,na.rm = TRUE)-overall_ideo,
+                      align_B = mean(avg_align,na.rm = TRUE),
+                      align_C = mean(score,na.rm = TRUE),
+                      align_D = mean(5 * budak_score,na.rm = TRUE),
+                      align_E = mean(allsides_score_community,na.rm = TRUE),
+                      align_F = mean(allsides_score,na.rm = TRUE),
+                      align_G = mean(8/3 * pew_score,na.rm = TRUE),
+                      align_H = mean(mturk_score,na.rm = TRUE)),
+                   by = .(domain)]
+  
+  dat <- dat[dom_align, on = .(domain)]
+  dat1 <- dat[,.(diet_slant_A=mean(align_A,na.rm = TRUE),
+                 diet_slant_B=mean(align_B,na.rm = TRUE),
+                 diet_slant_C=mean(align_C,na.rm = TRUE),
+                 diet_slant_D=mean(align_D,na.rm = TRUE),
+                 diet_slant_E=mean(align_E,na.rm = TRUE),
+                 diet_slant_F=mean(align_F,na.rm = TRUE),
+                 diet_slant_G=mean(align_G,na.rm = TRUE),
+                 diet_slant_H=mean(align_H,na.rm = TRUE)), 
+              by = .(panelist_id)]
   tibble(
     country = "USA",
-    cutoff = x,
+    cutoff = y,
     type = "non-political",
-    score = c(mean(abs(dat$diet_slant_A),na.rm = TRUE),
-      mean(abs(dat$diet_slant_B),na.rm = TRUE),
-      mean(abs(dat$diet_slant_C),na.rm = TRUE),
-      mean(abs(dat$diet_slant_D),na.rm = TRUE),
-      mean(abs(dat$diet_slant_E),na.rm = TRUE),
-      mean(abs(dat$diet_slant_F),na.rm = TRUE),
-      mean(abs(dat$diet_slant_G),na.rm = TRUE),
-      mean(abs(dat$diet_slant_H),na.rm = TRUE)),
+    score = c(sd(dat1$diet_slant_A,na.rm = TRUE),
+              sd(dat1$diet_slant_B,na.rm = TRUE),
+              sd(dat1$diet_slant_C,na.rm = TRUE),
+              sd(dat1$diet_slant_D,na.rm = TRUE),
+              sd(dat1$diet_slant_E,na.rm = TRUE),
+              sd(dat1$diet_slant_F,na.rm = TRUE),
+              sd(dat1$diet_slant_G,na.rm = TRUE),
+              sd(dat1$diet_slant_H,na.rm = TRUE)),
     meta = c("(A) Present data", "(B) Bakshy et al. scores", "(C) Robertson et al. scores", 
              "(D) Budak et al. scores", "(E) AllSides community scores",
              "(F) AllSides controlled scores", "(G) PEW scores", "(H) MTurk scores") 
   )
 })
 
-pol <- map_dfr(cutoffs,function(x){
-  dat <- lm_dt[political=="political" & duration >= x]
-  dat[,align := mean(leftright,na.rm = TRUE)-overall_ideo,by=c("domain")]
-  dat <- dat[,.(diet_slant_A = mean(align,na.rm = TRUE),
-                diet_slant_B = mean(avg_align,na.rm = TRUE),
-                diet_slant_C = mean(score,na.rm = TRUE),
-                diet_slant_D = mean(5 * budak_score,na.rm = TRUE),
-                diet_slant_E = mean(allsides_score_community,na.rm = TRUE),
-                diet_slant_F = mean(allsides_score,na.rm = TRUE),
-                diet_slant_G = mean(2.5 * pew_score,na.rm = TRUE),
-                diet_slant_H = mean(mturk_score,na.rm = TRUE)),
-             by=.(panelist_id)]
+pol <- map_dfr(cutoffs,function(y){
+  dat <- lm_dt
+  if(fixN){
+    peeps <- dat[duration>=120]
+    peeps <- unique(peeps[["panelist_id"]])
+    dat <- dat[panelist_id%in%peeps]
+  }
+  dat <- dat[political=="political" & duration>=y]
+  dom_align <- dat[,.(align_A = mean(leftright,na.rm = TRUE)-overall_ideo,
+                      align_B = mean(avg_align,na.rm = TRUE),
+                      align_C = mean(score,na.rm = TRUE),
+                      align_D = mean(5 * budak_score,na.rm = TRUE),
+                      align_E = mean(allsides_score_community,na.rm = TRUE),
+                      align_F = mean(allsides_score,na.rm = TRUE),
+                      align_G = mean(8/3 * pew_score,na.rm = TRUE),
+                      align_H = mean(mturk_score,na.rm = TRUE)),
+                   by = .(domain)]
+  
+  dat <- dat[dom_align, on = .(domain)]
+  dat1 <- dat[,.(diet_slant_A=mean(align_A,na.rm = TRUE),
+                 diet_slant_B=mean(align_B,na.rm = TRUE),
+                 diet_slant_C=mean(align_C,na.rm = TRUE),
+                 diet_slant_D=mean(align_D,na.rm = TRUE),
+                 diet_slant_E=mean(align_E,na.rm = TRUE),
+                 diet_slant_F=mean(align_F,na.rm = TRUE),
+                 diet_slant_G=mean(align_G,na.rm = TRUE),
+                 diet_slant_H=mean(align_H,na.rm = TRUE)), 
+              by = .(panelist_id)]
   tibble(
     country = "USA",
-    cutoff = x,
+    cutoff = y,
     type = "political",
-    score = c(mean(abs(dat$diet_slant_A),na.rm = TRUE),
-              mean(abs(dat$diet_slant_B),na.rm = TRUE),
-              mean(abs(dat$diet_slant_C),na.rm = TRUE),
-              mean(abs(dat$diet_slant_D),na.rm = TRUE),
-              mean(abs(dat$diet_slant_E),na.rm = TRUE),
-              mean(abs(dat$diet_slant_F),na.rm = TRUE),
-              mean(abs(dat$diet_slant_G),na.rm = TRUE),
-              mean(abs(dat$diet_slant_H),na.rm = TRUE)),
+    score = c(sd(dat1$diet_slant_A,na.rm = TRUE),
+              sd(dat1$diet_slant_B,na.rm = TRUE),
+              sd(dat1$diet_slant_C,na.rm = TRUE),
+              sd(dat1$diet_slant_D,na.rm = TRUE),
+              sd(dat1$diet_slant_E,na.rm = TRUE),
+              sd(dat1$diet_slant_F,na.rm = TRUE),
+              sd(dat1$diet_slant_G,na.rm = TRUE),
+              sd(dat1$diet_slant_H,na.rm = TRUE)),
     meta = c("(A) Present data", "(B) Bakshy et al. scores", "(C) Robertson et al. scores", 
              "(D) Budak et al. scores", "(E) AllSides community scores",
              "(F) AllSides controlled scores", "(G) PEW scores", "(H) MTurk scores") 
@@ -1628,17 +1660,17 @@ ggplot(summary_scores,aes(y = score, x = factor(cutoff))) +
   theme(axis.text = element_text(size = 10),
         axis.title = element_text(size = 14),
         legend.position = "bottom",
-        strip.text = element_text(size=12),
+        strip.text = element_text(size=10),
         legend.text = element_text(size=14)) +
   ylim(0, .6)+
   labs(x="cutoff (in sec)",y= "scores")
 
-ggsave(paste0("figures/",platform,"_divpart_other_scores.pdf"), width = 15, height = 10)
+ggsave(paste0("figures/",platform,"_divpart_other_scores.pdf"), width = 18, height = 10)
 
-#prevalences ----
+## prevalences ----
 system("Rscripts/freq_count.sh")
 
-## news proportion all visits ----
+### news proportion all visits ----
 fl <- list.files("processed_data/stats",patter="type_freq",full.names = TRUE)
 map_dfr(fl,function(f){
   df <- read_csv(f,show_col_types = FALSE)
@@ -1651,56 +1683,36 @@ map_dfr(fl,function(f){
   select(country,all,news=frac) |> 
   knitr::kable(format="latex",booktabs=TRUE)
 
-# news visits per visitor ----
+### pol non pol visits  ----
 fl <- list.files(paste0("processed_data/",platform,"/news_only"),pattern = "csv")
-non_pol <- map_dfr(cutoffs,function(y) {
-  map_dfr(fl,function(x){
-    dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
-    dt <- dt[political=="" & duration>=y]
-    dt1 <- dt[,.(count=.N),by=.(panelist_id)]
+
+stats <- map_dfr(fl,function(x){
+  dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
+  map_dfr(cutoffs,function(y){
     tibble(
       country = long_cases[short_cases==str_sub(x,1,2)],
-      cutoff = y,
-      value = mean(dt1[["count"]],na.rm=TRUE),
-      type = "non-political"
-    )
+      cutoff=y,
+      non_political=nrow(dt[political=="" & duration>=y]),
+      political=nrow(dt[political=="political" & duration>=y]))
   })
 })
 
-pol <- map_dfr(cutoffs,function(y) {
-  map_dfr(fl,function(x){
-    dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
-    dt <- dt[political=="political" & duration>=y]
-    dt1 <- dt[,.(count=.N),by=.(panelist_id)]
-    tibble(
-      country = long_cases[short_cases==str_sub(x,1,2)],
-      cutoff = y,
-      value = mean(dt1[["count"]],na.rm=TRUE),
-      type = "political"
-    )
-  })
-})
+stats |> 
+  mutate(
+    all = non_political + political,
+    frac_pol = political/all
+  ) |> 
+  dplyr::filter(country=="United Kingdom") |> 
+  mutate(frac_all = all/all[1]) |> 
+  select(-country)
 
-write_csv(bind_rows(non_pol,pol),paste0("processed_data/stats/",platform,"_avg_visits_news.csv"))
-
-## Plotting
-dat <- read_csv(paste0("processed_data/stats/",platform,"_avg_visits_news.csv"))
-
-ggplot(dat,aes(x=factor(cutoff),y=value,col=type))+
-  geom_point(size = 1.5)+
-  scale_color_manual(values=c("political" = "#AA8939","non-political" = "#303C74"),
-                     labels=c("Political news","Non-political news"),name="")+
-  theme_bw() + 
-  theme(axis.text = element_text(size = 10),
-        axis.title = element_text(size = 14),
-        strip.text = element_text(size = 12),
-        legend.position = "bottom",
-        legend.text = element_text(size=14)) +
-  labs(x="cutoff (in sec)",y="average visits per user")+
-  facet_wrap(country~.,scales="free_y")
-
-ggsave(paste0("figures/",platform,"_avg_visits_news.pdf"),width=9,height=6)
-
+## misc descriptives ----
+survey[, leftright := fcase(leftright < 6,-1,leftright == 6, 0, leftright > 6, 1)]
+survey[,.(mean=mean(leftright,na.rm=TRUE),
+          sd=sd(leftright,na.rm=TRUE),
+          min=min(leftright,na.rm=TRUE),
+          max=max(leftright,na.rm=TRUE),
+          N=sum(!is.na(leftright))),by=.(country)]
 
 # ## networks ----#
 # source("Rscripts/helpers.R")
@@ -1757,3 +1769,51 @@ ggsave(paste0("figures/",platform,"_avg_visits_news.pdf"),width=9,height=6)
 # 
 # ggsave("figures/network_densities.pdf",width=16,height=10)
 
+# fl <- list.files(paste0("processed_data/",platform,"/news_only"),pattern = "csv")
+# non_pol <- map_dfr(cutoffs,function(y) {
+#   map_dfr(fl,function(x){
+#     dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
+#     dt <- dt[political=="" & duration>=y]
+#     dt1 <- dt[,.(count=.N),by=.(panelist_id)]
+#     tibble(
+#       country = long_cases[short_cases==str_sub(x,1,2)],
+#       cutoff = y,
+#       value = mean(dt1[["count"]],na.rm=TRUE),
+#       type = "non-political"
+#     )
+#   })
+# })
+# 
+# pol <- map_dfr(cutoffs,function(y) {
+#   map_dfr(fl,function(x){
+#     dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
+#     dt <- dt[political=="political" & duration>=y]
+#     dt1 <- dt[,.(count=.N),by=.(panelist_id)]
+#     tibble(
+#       country = long_cases[short_cases==str_sub(x,1,2)],
+#       cutoff = y,
+#       value = mean(dt1[["count"]],na.rm=TRUE),
+#       type = "political"
+#     )
+#   })
+# })
+# 
+# write_csv(bind_rows(non_pol,pol),paste0("processed_data/stats/",platform,"_avg_visits_news.csv"))
+# 
+# ### Plotting ----
+# dat <- read_csv(paste0("processed_data/stats/",platform,"_avg_visits_news.csv"))
+# 
+# ggplot(dat,aes(x=factor(cutoff),y=value,col=type))+
+#   geom_point(size = 1.5)+
+#   scale_color_manual(values=c("political" = "#AA8939","non-political" = "#303C74"),
+#                      labels=c("Political news","Non-political news"),name="")+
+#   theme_bw() + 
+#   theme(axis.text = element_text(size = 10),
+#         axis.title = element_text(size = 14),
+#         strip.text = element_text(size = 12),
+#         legend.position = "bottom",
+#         legend.text = element_text(size=14)) +
+#   labs(x="cutoff (in sec)",y="average visits per user")+
+#   facet_wrap(country~.,scales="free_y")
+# 
+# ggsave(paste0("figures/",platform,"_avg_visits_news.pdf"),width=9,height=6)
