@@ -265,7 +265,7 @@ non_pol <- lapply(cutoffs,function(y) {
     dom_align <- dt[,.(align=mean(leftright,na.rm=TRUE) - mean_ideo),by = .(domain)]
     dt[dom_align, on = .(domain), dom_align:= align]
     dt1 <- dt[,.(diet_slant=mean(dom_align,na.rm = TRUE)), by = .(panelist_id)]
-    sd(dt1[["diet_slant"]]) #TODO: mean or SD?
+    sd(dt1[["diet_slant"]])
   })
 })
 
@@ -288,7 +288,7 @@ pol <- lapply(cutoffs,function(y) {
     dom_align <- dt[,.(align=mean(leftright,na.rm=TRUE) - mean_ideo),by = .(domain)]
     dt[dom_align, on = .(domain), dom_align:= align]
     dt1 <- dt[,.(diet_slant=mean(dom_align,na.rm = TRUE)), by = .(panelist_id)]
-    sd(dt1[["diet_slant"]]) #TODO: mean or SD?
+    sd(dt1[["diet_slant"]]) 
   })
 })
 
@@ -556,7 +556,6 @@ tidy_toplot_interest_inter <- tidy_toplot_interest_inter |>
                             "\\(C\\) Political Interest: High"))
 
 # Change order 
-# TODO: check that this really switches ref point from high to low
 tidy_toplot_interest_inter <- tidy_toplot_interest_inter |> 
   mutate(Estimate = -1 * Estimate,CI_lower = -1 * CI_lower, CI_upper = -1 * CI_upper)
 
@@ -651,7 +650,6 @@ tidy_toplot_gender_inter <- tidy_toplot_gender_inter |>
                             "\\(F\\) Gender: Male"))
 
 # Change order 
-# TODO: check that this really switches ref point from male to female
 tidy_toplot_gender_inter <- tidy_toplot_gender_inter |> 
   mutate(Estimate = -1 * Estimate,CI_lower = -1 * CI_lower, CI_upper = -1 * CI_upper)
 
@@ -901,7 +899,7 @@ tidy_toplot_extreme <- bind_rows(non_pol,pol) |>
 
 ## Generation (Conditional Effects Analysis) ----
 tidy_toplot <- data.frame()
-reference <- c("30", "60") #TODO: 65?
+reference <- c("30", "60")
 lm_dt[, age := age*35+30] #undo recode from before
 
 non_pol <- map_dfr(cutoffs,function(x){
