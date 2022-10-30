@@ -1798,7 +1798,7 @@ survey[,.(mean=mean(leftright,na.rm=TRUE),
 # 
 # write_csv(bind_rows(non_pol,pol),paste0("processed_data/stats/",platform,"_avg_visits_news.csv"))
 # 
-# ### Plotting ----
+# ### Plotting ----#
 # dat <- read_csv(paste0("processed_data/stats/",platform,"_avg_visits_news.csv"))
 # 
 # ggplot(dat,aes(x=factor(cutoff),y=value,col=type))+
