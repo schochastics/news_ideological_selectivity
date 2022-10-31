@@ -1704,6 +1704,11 @@ stats |>
   mutate(frac_all = all/all[1]) |> 
   select(-country)
 
+### all visitors/news visitors ----
+fl <- list.files("processed_data/stats/",pattern = "uniq")
+as.numeric(sapply(paste0("processed_data/stats/",short_cases,"_uniq_panelists_news.csv"),readLines))/
+as.numeric(sapply(paste0("processed_data/stats/",short_cases,"_uniq_panelists.csv"),readLines))
+
 ## misc descriptives ----
 survey[, leftright := fcase(leftright < 6,-1,leftright == 6, 0, leftright > 6, 1)]
 survey[,.(mean=mean(leftright,na.rm=TRUE),
@@ -1711,6 +1716,8 @@ survey[,.(mean=mean(leftright,na.rm=TRUE),
           min=min(leftright,na.rm=TRUE),
           max=max(leftright,na.rm=TRUE),
           N=sum(!is.na(leftright))),by=.(country)]
+
+
 
 # ## networks ----#
 # source("Rscripts/helpers.R")
