@@ -1,0 +1,61 @@
+country,cutoff,value,type
+Germany,3,126.79010416666667,non-political
+Spain,3,263.2461139896373,non-political
+France,3,204.09708737864077,non-political
+Italy,3,196.83549124143184,non-political
+United Kingdom,3,332.1660201706749,non-political
+USA,3,129.20496397117694,non-political
+Germany,10,96.61816192560175,non-political
+Spain,10,195.13219895287958,non-political
+France,10,151.78388554216866,non-political
+Italy,10,141.4171164225135,non-political
+United Kingdom,10,237.45905511811023,non-political
+USA,10,102.050736497545,non-political
+Germany,30,63.117269544924156,non-political
+Spain,30,126.3923541247485,non-political
+France,30,92.7195685670262,non-political
+Italy,30,86.80047885075818,non-political
+United Kingdom,30,139.80501618122977,non-political
+USA,30,71.93481989708405,non-political
+Germany,60,42.43834732085216,non-political
+Spain,60,85.0633704735376,non-political
+France,60,57.920967741935485,non-political
+Italy,60,54.586264656616414,non-political
+United Kingdom,60,87.41072925398156,non-political
+USA,60,42.908098271155595,non-political
+Germany,120,26.089563862928348,non-political
+Spain,120,49.23780487804878,non-political
+France,120,31.920747996438113,non-political
+Italy,120,29.315055762081784,non-political
+United Kingdom,120,51.04347826086956,non-political
+USA,120,23.872746553552492,non-political
+Germany,3,32.96984318455971,political
+Spain,3,51.97416666666667,political
+France,3,28.498073217726397,political
+Italy,3,24.29824561403509,political
+United Kingdom,3,56.4636488340192,political
+USA,3,38.22357723577236,political
+Germany,10,28.391699092088196,political
+Spain,10,43.00346620450607,political
+France,10,24.292806484295845,political
+Italy,10,19.728232189973614,political
+United Kingdom,10,46.895114942528735,political
+USA,10,32.05293276108727,political
+Germany,30,23.54730713245997,political
+Spain,30,32.72429906542056,political
+France,30,19.118119266055047,political
+Italy,30,14.966275659824047,political
+United Kingdom,30,33.864433811802236,political
+USA,30,25.309446254071663,political
+Germany,60,17.945364238410598,political
+Spain,60,25.228180862250262,political
+France,60,13.85545335085414,political
+Italy,60,11.325622775800712,political
+United Kingdom,60,24.848920863309353,political
+USA,60,16.951582867783983,political
+Germany,120,11.428270042194093,political
+Spain,120,16.43765903307888,political
+France,120,8.804701627486438,political
+Italy,120,6.577669902912621,political
+United Kingdom,120,16.50334075723831,political
+USA,120,11.263414634146342,political

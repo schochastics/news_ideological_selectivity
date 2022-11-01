@@ -5,7 +5,10 @@ data/
 .Rproj.user/
 figures/old/
 Rscripts/testing/
-processed_data/
+processed_data/desktop
+processed_data/both
+processed_data/mobile
+processed_data/zz_old
 figures/
 Rscripts/99_testing.R
 Rscripts/00_process_data.R
