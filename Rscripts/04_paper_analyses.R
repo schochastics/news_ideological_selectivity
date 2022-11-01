@@ -1030,78 +1030,137 @@ tidy_toplot_integrated <- tidy_toplot_integrated  %>%
 write_csv(tidy_toplot_integrated, paste0("processed_data/regression/",platform,"_conditional_effects.csv"))
 
 ## Plotting ----
+### reduced ----
 tidy_toplot_integrated <- read_csv(paste0("processed_data/regression/",platform,"_conditional_effects.csv"))
-tidy_toplot_integrated |> 
+dat <- tidy_toplot_integrated |> 
   mutate(level=str_replace_all(level,"\\(B\\) Access","\\(C\\) News Access")) |> 
   mutate(level=str_replace_all(level,"\\(C\\) Political Interest","\\(B\\) Political Interest")) |> 
   mutate(level=str_replace_all(level,"Direct","Non-referred")) |> 
-  mutate(header=str_replace_all(header,"\\(B\\) Access","\\(C\\) News Access")) |> 
-  mutate(header=str_replace_all(header,"\\(C\\) Political Interest","\\(B\\) Political Interest")) |> 
   dplyr::filter(str_detect(level,"\\(A\\)|\\(B\\)|\\(C\\)")) |> 
-  ggplot(aes(y = Estimate, x = factor(threshold))) +
-  geom_pointrange(
-    aes(ymin = CI_lower, ymax = CI_upper, color = level,shape=level), size=0.32,
-    position = position_dodge2(w = 0.4)) +
-  coord_flip() +
-  theme_bw() + 
-  scale_color_manual(values = c(
-    "#E69F00", "#009E73", "#0072B2", "#D55E00", "#CC79A7","grey25",
-    "#E69F00", "#009E73",
-    "#E69F00", "#009E73", "#0072B2", "#D55E00","#CC79A7",
-    "#E69F00", "#009E73","#E69F00", "#009E73",
-    "#E69F00", "#009E73","#E69F00", "#009E73","#E69F00", "#009E73"
-  ),name = "")+
+  mutate(level1=str_remove_all(level,"\\(.*\\).*\\:\\s")) |> 
+  mutate(header=str_replace_all(header,"\\(B\\) Access","\\(C\\) News Access")) |> 
+  mutate(header=str_replace_all(header,"\\(C\\) Political Interest","\\(B\\) Political Interest")) 
+
+labels <- unique(dat$level1)
+names(labels) <- labels
+ggplot(dat,aes(y = Estimate, x = factor(threshold))) +
+  geom_pointrange(data=dat[str_detect(dat$level,"\\(A\\)"),],shape=15,
+                  aes(ymin = CI_lower, ymax = CI_upper, color = level1), size=0.32,
+                  position = position_dodge2(w = 0.4)) +
   scale_shape_manual(values = c(
-    15,15,15,15,15,15,
-    16,16,
-    17,17,17,17,17,
-    7,7,8,8,9,9,10,10,11,11
+    15,15,15,15,15,
+    16,16,16,16,
+    17,17,7,7,8,8,9,9,10,10,11,11
   ), name = "")+
+  scale_color_manual(values = c(
+    "#E69F00", "#009E73", "#0072B2", "#D55E00", "#CC79A7","grey25"),
+    name="(A) Country",
+    guide = guide_legend(title.position = "left", order = 1,nrow=2))+
+  ggnewscale::new_scale_color()+
+  geom_pointrange(data=dat[str_detect(dat$level,"\\(B\\)"),],shape=16,
+                  aes(ymin = CI_lower, ymax = CI_upper, color = level1), size=0.32, 
+                  position = position_dodge2(w = 0.4)) +
+  scale_color_manual(values = c("#E69F00", "#009E73"),
+                     name="(B) Political Interest",
+                     guide = guide_legend(title.position = "left", order = 2,nrow=2))+
+  ggnewscale::new_scale_color()+
+  geom_pointrange(data=dat[str_detect(dat$level,"\\(C\\)"),],shape=17,
+                  aes(ymin = CI_lower, ymax = CI_upper, color = level1), size=0.32,
+                  position = position_dodge2(w = 0.4)) +
+  scale_color_manual(values = c("#E69F00", "#009E73", "#0072B2", "#D55E00","#CC79A7"),
+                     name="(C) News Access",
+                     guide = guide_legend(title.position = "left", order = 3,nrow=2))+
   facet_grid(type~header, scales = "free_x") +
-  theme(axis.text = element_text(size = 10),
+  coord_flip() +
+  theme_bw()+
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 12),
+        strip.text = element_text(size = 14),
+        legend.text = element_text(size = 10),
         legend.position = "bottom",
-        legend.title = element_blank()) +
-  labs(y = "Ideological Selectivity",x="Threshold") +
+        legend.direction = "horizontal")+
+  # legend.title = element_blank()) +
+  labs(y = "Ideological Selectivity",x="cutoff (in sec)") +
   geom_hline(yintercept = 0, linetype = "dashed")
 
-ggsave(paste0("figures/",platform,"_regression_conditional_reduced.pdf"), width = 10, height = 7)
+ggsave(paste0("figures/",platform,"_regression_conditional_reduced.pdf"), width = 12, height = 7)
 
+### full ----
 tidy_toplot_integrated <- read_csv(paste0("processed_data/regression/",platform,"_conditional_effects.csv"))
-tidy_toplot_integrated |> 
+dat <- tidy_toplot_integrated |> 
   mutate(level=str_replace_all(level,"\\(B\\) Access","\\(C\\) News Access")) |> 
   mutate(level=str_replace_all(level,"\\(C\\) Political Interest","\\(B\\) Political Interest")) |> 
   mutate(level=str_replace_all(level,"Direct","Non-referred")) |> 
+  mutate(level1=str_remove_all(level,"\\(.*\\).*\\:\\s")) |> 
   mutate(header=str_replace_all(header,"\\(B\\) Access","\\(C\\) News Access")) |> 
-  mutate(header=str_replace_all(header,"\\(C\\) Political Interest","\\(B\\) Political Interest")) |> 
-  # dplyr::filter(str_detect(level,"\\(A\\)|\\(B\\)|\\(C\\)")) |> 
-  ggplot(aes(y = Estimate, x = factor(threshold))) +
-  geom_pointrange(
-    aes(ymin = CI_lower, ymax = CI_upper, color = level,shape=level), size=0.32,
-    position = position_dodge2(w = 0.4)) +
-  coord_flip() +
-  theme_bw() + 
+  mutate(header=str_replace_all(header,"\\(C\\) Political Interest","\\(B\\) Political Interest")) 
+
+labels <- unique(dat$level1)
+names(labels) <- labels
+ggplot(dat,aes(y = Estimate, x = factor(threshold))) +
+  geom_pointrange(data=dat[str_detect(dat$level,"\\(A\\)"),],shape=15,
+                  aes(ymin = CI_lower, ymax = CI_upper, color = level1), size=0.32,
+                  position = position_dodge2(w = 0.4)) +
   scale_color_manual(values = c(
-    "#E69F00", "#009E73", "#0072B2", "#D55E00", "#CC79A7","grey25",
-    "#E69F00", "#009E73",
-    "#E69F00", "#009E73", "#0072B2", "#D55E00","#CC79A7",
-    "#E69F00", "#009E73","#E69F00", "#009E73",
-    "#E69F00", "#009E73","#E69F00", "#009E73","#E69F00", "#009E73"
-  ),name = "")+
-  scale_shape_manual(values = c(
-    15,15,15,15,15,15,
-    16,16,
-    17,17,17,17,17,
-    7,7,8,8,9,9,10,10,11,11
-  ), name = "")+
+    "#E69F00", "#009E73", "#0072B2", "#D55E00", "#CC79A7","grey25"),
+    name="(A) Country",
+    guide = guide_legend(title.position = "left", order = 1,nrow=3))+
+  ggnewscale::new_scale_color()+
+  geom_pointrange(data=dat[str_detect(dat$level,"\\(B\\)"),],shape=16,
+                  aes(ymin = CI_lower, ymax = CI_upper, color = level1), size=0.32, 
+                  position = position_dodge2(w = 0.4)) +
+  scale_color_manual(values = c("#E69F00", "#009E73"),
+                     name="(B) Political Interest",
+                     guide = guide_legend(title.position = "left", order = 2,nrow=2))+
+  ggnewscale::new_scale_color()+
+  geom_pointrange(data=dat[str_detect(dat$level,"\\(C\\)"),],shape=17,
+                  aes(ymin = CI_lower, ymax = CI_upper, color = level1), size=0.32,
+                  position = position_dodge2(w = 0.4)) +
+  scale_color_manual(values = c("#E69F00", "#009E73", "#0072B2", "#D55E00","#CC79A7"),
+                     name="(C) News Access",
+                     guide = guide_legend(title.position = "left", order = 3,nrow=3))+
+  ggnewscale::new_scale_color()+
+  geom_pointrange(data=dat[str_detect(dat$level,"\\(D\\)"),],shape=7,
+                  aes(ymin = CI_lower, ymax = CI_upper, color = level1), size=0.32,
+                  position = position_dodge2(w = 0.4)) +
+  scale_color_manual(values = c("#E69F00", "#009E73", "#0072B2", "#D55E00","#CC79A7"),
+                     name="(D) Political Extremity",
+                     guide = guide_legend(title.position = "left", order = 4,nrow=2))+
+  ggnewscale::new_scale_color()+
+  geom_pointrange(data=dat[str_detect(dat$level,"\\(E\\)"),],shape=8,
+                  aes(ymin = CI_lower, ymax = CI_upper, color = level1), size=0.32,
+                  position = position_dodge2(w = 0.4)) +
+  scale_color_manual(values = c("#E69F00", "#009E73", "#0072B2", "#D55E00","#CC79A7"),
+                     name="(E) Generation",
+                     guide = guide_legend(title.position = "left", order = 5,nrow=2))+
+  ggnewscale::new_scale_color()+
+  geom_pointrange(data=dat[str_detect(dat$level,"\\(F\\)"),],shape=9,
+                  aes(ymin = CI_lower, ymax = CI_upper, color = level1), size=0.32,
+                  position = position_dodge2(w = 0.4)) +
+  scale_color_manual(values = c("#E69F00", "#009E73", "#0072B2", "#D55E00","#CC79A7"),
+                     name="(F) Gender",
+                     guide = guide_legend(title.position = "left", order = 6,nrow=2))+
+  ggnewscale::new_scale_color()+
+  geom_pointrange(data=dat[str_detect(dat$level,"\\(G\\)"),],shape=10,
+                  aes(ymin = CI_lower, ymax = CI_upper, color = level1), size=0.32,
+                  position = position_dodge2(w = 0.4)) +
+  scale_color_manual(values = c("#E69F00", "#009E73", "#0072B2", "#D55E00","#CC79A7"),
+                     name="(G) Education",
+                     guide = guide_legend(title.position = "left", order = 7,nrow=2))+
   facet_grid(type~header, scales = "free_x") +
-  theme(axis.text = element_text(size = 10),
+  coord_flip() +
+  theme_bw()+
+  theme(axis.text = element_text(size = 14),
+        axis.title = element_text(size = 16),
+        strip.text = element_text(size = 16),
         legend.position = "bottom",
-        legend.title = element_blank()) +
-  labs(y = "Ideological Selectivity",x="Threshold") +
+        legend.direction = "horizontal")+
+  # legend.title = element_blank()) +
+  labs(y = "Ideological Selectivity",x="cutoff (in sec)") +
   geom_hline(yintercept = 0, linetype = "dashed")
 
-ggsave(paste0("figures/",platform,"_regression_conditional.pdf"), width = 10, height = 7)
 
+ggsave(paste0("figures/",platform,"_regression_conditional.pdf"), width = 18, height = 10)
 
 # Appendix ----
 
