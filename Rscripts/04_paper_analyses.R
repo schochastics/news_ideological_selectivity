@@ -1776,108 +1776,21 @@ survey[,.(mean=mean(leftright,na.rm=TRUE),
           max=max(leftright,na.rm=TRUE),
           N=sum(!is.na(leftright))),by=.(country)]
 
-
-
-# ## networks ----#
-# source("Rscripts/helpers.R")
-# library(igraph)
-# ### create networks ----#
-# fl <- list.files("processed_data/",platform,"/news_only", full.names = TRUE,pattern = "csv")
-# res <- tibble(
-#   country = character(0),
-#   type = character(0),
-#   cutoff = numeric(0),
-#   political = logical(0),
-#   fixN = logical(0),
-#   network = list()
-# )
-# for (f in fl) {
-#   cat(f,"\n")
-#   ctry <- str_remove(str_extract(f, "[a-z]{2}\\."), "\\.")
-#   dt <- data.table::fread(f)
-#   for (cval in cutoffs) {
-#     gnews <- create_networks(dt, political = FALSE, weights = FALSE, fixN = fixN, reach = 0, cutoff = cval)
-#     gpols <- create_networks(dt, political = TRUE, weights = FALSE, fixN = fixN, reach = 0, cutoff = cval)
-#     
-#     tmp <- tibble(
-#       country = rep(ctry, 6), type = c(names(gnews), names(gpols)),
-#       cutoff = cval, political = rep(c(FALSE, TRUE), each = 3), fixN = fixN,
-#       network = c(unname(gnews), unname(gpols))
-#     )
-#     
-#     res <- bind_rows(res, tmp)
-#   }
-# }
-# saveRDS(res, "processed_data/stats/networks.RDS")
-# 
-# tbl <- readRDS("processed_data/networks.RDS")
-# tbl[["density"]] <- sapply(tbl[["network"]], graph.density)
-# tbl[["political"]] <- if_else(tbl[["political"]],"political news","non-political news")
-# tbl[["case"]] <- long_cases[match(tbl$country,short_cases)]
-# # plot density for all networks ----#
-# ggplot(tbl,aes(x=factor(cutoff),y=density,col=political))+
-#   geom_point()+
-#   geom_hline(yintercept = 0, linetype = "dashed",color="transparent")+
-#   scale_color_manual(values=c("political news" = "#AA8939",
-#                               "non-political news" = "#303C74"),
-#                      labels=c("political news","non-political news"),name="")+
-#   facet_grid(type~case,scales = "free_y") +
-#   theme_bw()+
-#   theme(legend.position = "none",
-#         panel.grid.minor = element_blank(),
-#         legend.text = element_text(family="sans", size = 20),
-#         axis.text.x = element_text(family="sans", size = 12),
-#         strip.text = element_text(face = "bold"),
-#         text = element_text(family="sans", size=16))+
-#   labs(x = "cutoff (in sec)",y = "")
-# 
-# ggsave("figures/network_densities.pdf",width=16,height=10)
-
-# fl <- list.files(paste0("processed_data/",platform,"/news_only"),pattern = "csv")
-# non_pol <- map_dfr(cutoffs,function(y) {
-#   map_dfr(fl,function(x){
-#     dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
-#     dt <- dt[political=="" & duration>=y]
-#     dt1 <- dt[,.(count=.N),by=.(panelist_id)]
-#     tibble(
-#       country = long_cases[short_cases==str_sub(x,1,2)],
-#       cutoff = y,
-#       value = mean(dt1[["count"]],na.rm=TRUE),
-#       type = "non-political"
-#     )
-#   })
-# })
-# 
-# pol <- map_dfr(cutoffs,function(y) {
-#   map_dfr(fl,function(x){
-#     dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
-#     dt <- dt[political=="political" & duration>=y]
-#     dt1 <- dt[,.(count=.N),by=.(panelist_id)]
-#     tibble(
-#       country = long_cases[short_cases==str_sub(x,1,2)],
-#       cutoff = y,
-#       value = mean(dt1[["count"]],na.rm=TRUE),
-#       type = "political"
-#     )
-#   })
-# })
-# 
-# write_csv(bind_rows(non_pol,pol),paste0("processed_data/stats/",platform,"_avg_visits_news.csv"))
-# 
-# ### Plotting ----#
-# dat <- read_csv(paste0("processed_data/stats/",platform,"_avg_visits_news.csv"))
-# 
-# ggplot(dat,aes(x=factor(cutoff),y=value,col=type))+
-#   geom_point(size = 1.5)+
-#   scale_color_manual(values=c("political" = "#AA8939","non-political" = "#303C74"),
-#                      labels=c("Political news","Non-political news"),name="")+
-#   theme_bw() + 
-#   theme(axis.text = element_text(size = 10),
-#         axis.title = element_text(size = 14),
-#         strip.text = element_text(size = 12),
-#         legend.position = "bottom",
-#         legend.text = element_text(size=14)) +
-#   labs(x="cutoff (in sec)",y="average visits per user")+
-#   facet_wrap(country~.,scales="free_y")
-# 
-# ggsave(paste0("figures/",platform,"_avg_visits_news.pdf"),width=9,height=6)
+fl <- list.files(paste0("processed_data/",platform),pattern = "csv")
+visits <- map(fl,function(x){
+  dt <- data.table::fread(paste0("processed_data/",platform,"/",x),select = c(1,3,5,7,8))
+  dt_sum <- dt[,.(news_visits = sum(type=="news"),
+                  pol_visits = sum(political=="political"),
+                  outlets = length(unique(domain[type=="news"])),
+                  fb_visits=sum(type=="facebook"),
+                  twitter_visits = sum(type=="twitter"),
+                  search_visits = sum(type=="search"),
+                  portal_visitts = sum(type=="portal")
+  ),by=.(panelist_id)]
+  totals <- colSums(dt_sum[,-1])
+  rbind(
+    apply(dt_sum[,-1],2,summary)[c(1,3,4,6),],
+    total)
+})
+names(visits) <- long_cases
+saveRDS(visits,paste0("processed_data/stats/",platform,"_visit_stats.RDS"))
