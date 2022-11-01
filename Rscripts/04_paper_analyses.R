@@ -79,18 +79,18 @@ p <- ggplot(plt_tbl,aes(x=as.factor(cutoff),y=value,color=name)) +
   geom_point(position = position_dodge(0.6))+
   geom_hline(yintercept = 0, linetype = "dashed",color="transparent")+
   scale_color_manual(values=c("political news" = "#AA8939","non-political news" = "#303C74"),
-                     labels=c("political news","non-political news"),name="")+
+                     labels=c("Political news","Non-political news"),name="")+
   facet_grid(.~case,scales = "free_y") +
   theme_bw()+
-  theme(legend.position = "none",
+  theme(legend.position = "bottom",
         panel.grid.minor = element_blank(),
-        legend.text = element_text(family="sans", size = 20),
+        legend.text = element_text(family="sans", size = 12),
         axis.text.x = element_text(family="sans", size = 12),
         strip.text = element_text(face = "bold"),
-        text = element_text(family="sans", size=16))+
+        text = element_text(family="sans", size=12))+
   labs(x = "cutoff (in sec)",y = "")+
-  scale_y_continuous(labels = scales::label_percent())
-  # guides(fill = guide_legend(override.aes = list(size=3)))
+  scale_y_continuous(labels = scales::label_percent())+
+  guides(fill = guide_legend(override.aes = list(size=3)))
 
 ggsave(paste0("figures/",platform,"_figure1.pdf"),p,width=10,height=4)
  
