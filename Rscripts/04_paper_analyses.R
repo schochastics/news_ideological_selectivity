@@ -1785,12 +1785,12 @@ visits <- map(fl,function(x){
                   fb_visits=sum(type=="facebook"),
                   twitter_visits = sum(type=="twitter"),
                   search_visits = sum(type=="search"),
-                  portal_visitts = sum(type=="portal")
+                  portal_visits = sum(type=="portal")
   ),by=.(panelist_id)]
   totals <- colSums(dt_sum[,-1])
   rbind(
     apply(dt_sum[,-1],2,summary)[c(1,3,4,6),],
-    total)
+    totals)
 })
 names(visits) <- long_cases
 saveRDS(visits,paste0("processed_data/stats/",platform,"_visit_stats.RDS"))
