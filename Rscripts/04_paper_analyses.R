@@ -1044,7 +1044,6 @@ tidy_toplot_integrated |>
     position = position_dodge2(w = 0.4)) +
   coord_flip() +
   theme_bw() + 
-  theme_bw() + 
   scale_color_manual(values = c(
     "#E69F00", "#009E73", "#0072B2", "#D55E00", "#CC79A7","grey25",
     "#E69F00", "#009E73",
@@ -1053,9 +1052,10 @@ tidy_toplot_integrated |>
     "#E69F00", "#009E73","#E69F00", "#009E73","#E69F00", "#009E73"
   ),name = "")+
   scale_shape_manual(values = c(
-    15,15,15,15,15,
-    16,16,16,16,
-    17,17,7,7,8,8,9,9,10,10,11,11
+    15,15,15,15,15,15,
+    16,16,
+    17,17,17,17,17,
+    7,7,8,8,9,9,10,10,11,11
   ), name = "")+
   facet_grid(type~header, scales = "free_x") +
   theme(axis.text = element_text(size = 10),
@@ -1080,7 +1080,6 @@ tidy_toplot_integrated |>
     position = position_dodge2(w = 0.4)) +
   coord_flip() +
   theme_bw() + 
-  theme_bw() + 
   scale_color_manual(values = c(
     "#E69F00", "#009E73", "#0072B2", "#D55E00", "#CC79A7","grey25",
     "#E69F00", "#009E73",
@@ -1089,9 +1088,10 @@ tidy_toplot_integrated |>
     "#E69F00", "#009E73","#E69F00", "#009E73","#E69F00", "#009E73"
   ),name = "")+
   scale_shape_manual(values = c(
-    15,15,15,15,15,
-    16,16,16,16,
-    17,17,7,7,8,8,9,9,10,10,11,11
+    15,15,15,15,15,15,
+    16,16,
+    17,17,17,17,17,
+    7,7,8,8,9,9,10,10,11,11
   ), name = "")+
   facet_grid(type~header, scales = "free_x") +
   theme(axis.text = element_text(size = 10),
