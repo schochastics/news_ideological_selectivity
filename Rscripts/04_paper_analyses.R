@@ -1794,3 +1794,79 @@ visits <- map(fl,function(x){
 })
 names(visits) <- long_cases
 saveRDS(visits,paste0("processed_data/stats/",platform,"_visit_stats.RDS"))
+
+## correlation with existing scores ----
+survey_data <- read_rds("data/survey_data_r.rds") %>% filter(country == "USA") %>% 
+  select(panelist_id, leftright,  polinterest, extremism, age, female, edu, log_total_visits) %>% 
+  na.omit() %>% mutate(leftright = case_when(leftright < 6 ~ -1, leftright >= 6 & leftright <= 6 ~ 0, leftright > 6 ~ 1)) 
+
+us <- read_csv(paste0("processed_data/",platform,"/news_only/us.csv")) %>% mutate(country = "USA")
+us$political[de$political == ""] <- "non-political"
+us <- us %>% left_join(survey_data, by = "panelist_id")
+us <- us %>% filter(duration>10)
+overall_ideo <- mean(us$leftright, na.rm = TRUE)
+
+robertson_data <- read.csv("data/bias_scores.csv") %>% mutate(domain = gsub("www.", "", domain))
+us <- us %>% left_join(robertson_data, by = "domain")
+
+# Bakshy et al. scores
+k <- us %>% group_by(domain) %>% mutate(n_visit = n_distinct(panelist_id)) %>% filter(n_visit > 30)
+k <- k %>% group_by(domain) %>% summarise(align = mean(leftright, na.rm = TRUE) - overall_ideo, avg_align = mean(fb_score, na.rm = TRUE), n_pop = n())
+k$meta <- "(B) Bakshy et al. scores (r = .80)"
+
+# Robertson et al. scores
+k1 <- us %>% group_by(domain) %>% mutate(n_visit = n_distinct(panelist_id)) %>% filter(n_visit > 30)
+k1 <- k1 %>% group_by(domain) %>% summarise(align = mean(leftright, na.rm = TRUE) - overall_ideo, avg_align = mean(score, na.rm = TRUE), n_pop = n())
+k1$meta <- "(C) Robertson et al. scores (r = .64)"
+
+# Budak et al. scores
+k2 <- us %>% group_by(domain) %>% mutate(n_visit = n_distinct(panelist_id)) %>% filter(n_visit > 30)
+k2 <- k2 %>% mutate(budak_score = budak_score*5)
+k2 <- k2 %>% group_by(domain) %>% summarise(align = mean(leftright, na.rm = TRUE) - overall_ideo, avg_align = mean(budak_score, na.rm = TRUE), n_pop = n())
+k2$meta <- "(D) Budak et al. scores (r = .94)"
+
+# allsides_score
+k3 <- us %>% group_by(domain) %>% mutate(n_visit = n_distinct(panelist_id)) %>% filter(n_visit > 30)
+k3 <- k3 %>% group_by(domain) %>% summarise(align = mean(leftright, na.rm = TRUE) - overall_ideo, avg_align = mean(allsides_score_community, na.rm = TRUE), n_pop = n())
+k3$meta <- "(E) AllSides community scores (r = .93)"
+
+# allsides_score_community
+k4 <- us %>% group_by(domain) %>% mutate(n_visit = n_distinct(panelist_id)) %>% filter(n_visit > 30)
+k4 <- k4 %>% group_by(domain) %>% summarise(align = mean(leftright, na.rm = TRUE) - overall_ideo, avg_align = mean(allsides_score, na.rm = TRUE), n_pop = n())
+k4$meta <- "(F) AllSides controlled scores (r = .82)"
+
+# pew_score
+k6 <- us %>% group_by(domain) %>% mutate(n_visit = n_distinct(panelist_id)) %>% filter(n_visit > 30)
+k6 <- k6 %>% mutate(pew_score = pew_score*(8/3)-0.11)
+k6 <- k6 %>% group_by(domain) %>% summarise(align = mean(leftright, na.rm = TRUE) - overall_ideo, avg_align = mean(pew_score, na.rm = TRUE), n_pop = n())
+k6$meta <- "(G) PEW scores (r = .83)"
+
+# mturk_scores
+k5 <- us %>% group_by(domain) %>% mutate(n_visit = n_distinct(panelist_id)) %>% filter(n_visit > 30)
+k5 <- k5 %>% group_by(domain) %>% summarise(align = mean(leftright, na.rm = TRUE) - overall_ideo, avg_align = mean(mturk_score, na.rm = TRUE), n_pop = n())
+k5$meta <- "(H) Mturk scores (r = .72)"
+
+# Build an integrated graph
+k_int <- rbind(k, k1, k2, k3, k4, k5, k6)
+
+plot <- ggplot(k_int, aes(x= avg_align, y= align, size=(n_pop^.8))) +
+  geom_point() +
+  geom_smooth(method='glm', formula= y~x) +
+  geom_text(label = k_int$domain, hjust = 0, nudge_x = 0.1, alpha = .3) +
+  geom_point(color = "cornflowerblue",
+             alpha = .85) +
+  theme_bw()+
+  scale_x_continuous( 
+    limits=c(-1., 1.3)) +
+  scale_y_continuous( 
+    limits=c(-1., 1.)) +
+  scale_size(range = c(1,8)) +
+  facet_wrap(~meta, nrow = 4, scales = "free_y")+
+  theme(#axis.title = element_blank(),
+    axis.text = element_text(size = 11),
+    legend.position = "none",
+    legend.text = element_blank(),
+    legend.title = element_blank()) +
+  xlab("(B-H) Reference scores") +
+  ylab("(A) Present data")
+plot  
