@@ -1849,7 +1849,7 @@ k5$meta <- "(H) Mturk scores (r = .72)"
 # Build an integrated graph
 k_int <- rbind(k, k1, k2, k3, k4, k5, k6)
 
-plot <- ggplot(k_int, aes(x= avg_align, y= align, size=(n_pop^.8))) +
+ggplot(k_int, aes(x= avg_align, y= align, size=(n_pop^.8))) +
   geom_point() +
   geom_smooth(method='glm', formula= y~x) +
   geom_text(label = k_int$domain, hjust = 0, nudge_x = 0.1, alpha = .3) +
@@ -1869,4 +1869,5 @@ plot <- ggplot(k_int, aes(x= avg_align, y= align, size=(n_pop^.8))) +
     legend.title = element_blank()) +
   xlab("(B-H) Reference scores") +
   ylab("(A) Present data")
-plot  
+
+ggsave(paste0("figures/",platform,"_align_comparison.pdf"), width = 10, height = 16)
