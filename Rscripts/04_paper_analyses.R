@@ -76,7 +76,7 @@ plt_tbl <- map_dfr(seq_along(vis_cnt_lst),function(x){
   mutate(name = ifelse(name=="pol","political news","non-political news"))
 
 p <- ggplot(plt_tbl,aes(x=as.factor(cutoff),y=value,color=name)) + 
-  geom_point(position = position_dodge(0.6))+
+  geom_point()+
   geom_hline(yintercept = 0, linetype = "dashed",color="transparent")+
   scale_color_manual(values=c("political news" = "#AA8939","non-political news" = "#303C74"),
                      labels=c("Political news","Non-political news"),name="")+
@@ -84,11 +84,12 @@ p <- ggplot(plt_tbl,aes(x=as.factor(cutoff),y=value,color=name)) +
   theme_bw()+
   theme(legend.position = "bottom",
         panel.grid.minor = element_blank(),
-        legend.text = element_text(family="sans", size = 12),
+        legend.text = element_text(family="sans", size = 14),
         axis.text.x = element_text(family="sans", size = 12),
+        axis.title.x = element_text(family="sans", size = 14),
         strip.text = element_text(face = "bold"),
         text = element_text(family="sans", size=12))+
-  labs(x = "cutoff (in sec)",y = "")+
+  labs(x = "threshold (in sec)",y = "")+
   scale_y_continuous(labels = scales::label_percent())+
   guides(fill = guide_legend(override.aes = list(size=3)))
 
@@ -404,25 +405,26 @@ result_files <- paste0(platform,c("_segregation_scores.RDS",
 types <- c("(A) Ideological Segregation","(B) News Diet Diversity","(C) Partisanship in News Diets")
 
 res_tbl <- map_dfr(seq_along(result_files),function(x){
-  readRDS(paste0("processed_data/",result_files[x])) |> mutate(type=types[x]) |> 
+  readRDS(paste0("processed_data/stats/",result_files[x])) |> mutate(type=types[x]) |> 
   pivot_longer(cols=c(non_political,political),names_to = "news_type",values_to = "score")
 })
 
 
 ggplot(res_tbl,aes(x=as.factor(cutoff),y=score,color = news_type)) +
-  geom_point(position = position_dodge(0.6))+
+  geom_point()+
   geom_hline(yintercept = 0, linetype = "dashed",color="transparent")+
   scale_color_manual(values=c("political" = "#AA8939","non_political" = "#303C74"),
-                     labels=c("political news","non-political news"),name="")+
+                     labels=c("Political news","Non-political news"),name="")+
   facet_grid(type~case,scales = "free_y") +
   theme_bw()+
   theme(legend.position = "bottom",
         panel.grid.minor = element_blank(),
-        legend.text = element_text(family="sans", size = 20),
-        axis.text.x = element_text(family="sans", size = 12,angle = 45,vjust=1),
+        legend.text = element_text(family="sans", size = 16),
+        axis.text.x = element_text(family="sans", size = 14),
+        axis.title = element_text(family="sans", size = 20),
         strip.text = element_text(face = "bold"),
         text = element_text(family="sans", size=16))+
-  labs(x = "cutoff (in sec)",y = "score")+
+  labs(x = "threshold (in sec)",y = "score")+
   guides(colour = guide_legend(override.aes = list(size=3)))
 
 ggsave(paste0("figures/",platform,"_figure2.pdf"),width=16,height=10)
@@ -726,10 +728,11 @@ tidy_toplot_integrated |>
   ), name = "")+
   facet_grid(type~header, scales = "free_x") +
   theme(axis.text = element_text(size = 10),
+        axis.title = element_text(size = 18),
         legend.position = "bottom",
         legend.text = element_text(size=14)) +
   labs(title="",
-       x = "cutoff (in sec)") +
+       x = "threshold (in sec)",y = "estimate") +
   geom_hline(yintercept = 0, linetype = "dashed")+
   guides(color = guide_legend(override.aes = list(size=0.75)))
 
@@ -1074,13 +1077,13 @@ ggplot(dat,aes(y = Estimate, x = factor(threshold))) +
   coord_flip() +
   theme_bw()+
   theme(axis.text = element_text(size = 12),
-        axis.title = element_text(size = 12),
+        axis.title = element_text(size = 14),
         strip.text = element_text(size = 14),
         legend.text = element_text(size = 10),
         legend.position = "bottom",
         legend.direction = "horizontal")+
   # legend.title = element_blank()) +
-  labs(y = "Ideological Selectivity",x="cutoff (in sec)") +
+  labs(y = "ideological selectivity",x="threshold (in sec)") +
   geom_hline(yintercept = 0, linetype = "dashed")
 
 ggsave(paste0("figures/",platform,"_regression_conditional_reduced.pdf"), width = 12, height = 7)
@@ -1151,12 +1154,12 @@ ggplot(dat,aes(y = Estimate, x = factor(threshold))) +
   coord_flip() +
   theme_bw()+
   theme(axis.text = element_text(size = 14),
-        axis.title = element_text(size = 16),
+        axis.title = element_text(size = 20),
         strip.text = element_text(size = 16),
         legend.position = "bottom",
         legend.direction = "horizontal")+
   # legend.title = element_blank()) +
-  labs(y = "Ideological Selectivity",x="cutoff (in sec)") +
+  labs(y = "ideological selectivity",x="threshold (in sec)") +
   geom_hline(yintercept = 0, linetype = "dashed")
 
 
@@ -1180,16 +1183,17 @@ bind_rows(
     geom_hline(yintercept = 0, linetype = "dashed",color="transparent")+
     scale_color_manual(values=c("political news" = "#AA8939",
                                 "non-political news" = "#303C74"),
-                       labels=c("political news","non-political news"),name="")+
+                       labels=c("Political news","Non-political news"),name="")+
     facet_grid(type~case,scales = "free_y") +
     theme_bw()+
-    theme(legend.position = "none",
+    theme(legend.position = "bottom",
           panel.grid.minor = element_blank(),
-          legend.text = element_text(family="sans", size = 20),
+          legend.text = element_text(family="sans", size = 16),
           axis.text.x = element_text(family="sans", size = 12),
+          axis.title = element_text(family="sans", size = 18),
           strip.text = element_text(face = "bold"),
           text = element_text(family="sans", size=16))+
-    labs(x = "cutoff (in sec)",y = "")
+    labs(x = "threshold (in sec)",y = "score")
 
 ggsave(paste0("figures/",platform,"_seg_score_comparison.pdf"),width=16,height=10)
 
@@ -1207,16 +1211,16 @@ bind_rows(
   geom_hline(yintercept = 0, linetype = "dashed",color="transparent")+
   scale_color_manual(values=c("political news" = "#AA8939",
                               "non-political news" = "#303C74"),
-                     labels=c("political news","non-political news"),name="")+
+                     labels=c("Political news","Non-political news"),name="")+
   facet_grid(type~case,scales = "free_y") +
   theme_bw()+
-  theme(legend.position = "none",
+  theme(legend.position = "bottom",
         panel.grid.minor = element_blank(),
-        legend.text = element_text(family="sans", size = 20),
+        legend.text = element_text(family="sans", size = 16),
         axis.text.x = element_text(family="sans", size = 12),
         strip.text = element_text(face = "bold"),
         text = element_text(family="sans", size=16))+
-  labs(x = "cutoff (in sec)",y = "")
+  labs(x = "threshold (in sec)",y = "score")
 
 ggsave(paste0("figures/",platform,"_diversity_comparison.pdf"),width=16,height=10)
 
@@ -1485,11 +1489,11 @@ tidy_toplot |>
   theme_bw() + 
   facet_wrap(~meta,scales = "free_x",nrow=2)+
   theme(axis.text = element_text(size = 10),
-        axis.title = element_text(size = 14),
+        axis.title = element_text(size = 16),
         strip.text = element_text(size = 12),
         legend.position = "bottom",
-        legend.text = element_text(size=14)) +
-  labs(x="cutoff (in sec)")+
+        legend.text = element_text(size=18)) +
+  labs(x="threshold (in sec)",y = "estimate")+
   geom_hline(yintercept = 0, linetype = "dashed")
 
 ggsave(paste0("figures/",platform,"_compare_other_scores.pdf"), width = 12, height = 8)
@@ -1714,15 +1718,15 @@ ggplot(summary_scores,aes(y = score, x = factor(cutoff))) +
                      labels=c("Political news","Non-political news"),name="")+
   theme_bw() + 
   facet_grid(meta2~meta, scales = "free_y") +
-  theme(axis.text = element_text(size = 10),
-        axis.title = element_text(size = 14),
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 18),
         legend.position = "bottom",
         strip.text = element_text(size=10),
-        legend.text = element_text(size=14)) +
+        legend.text = element_text(size=18)) +
   ylim(0, .6)+
-  labs(x="cutoff (in sec)",y= "scores")
+  labs(x="threshold (in sec)",y= "score")
 
-ggsave(paste0("figures/",platform,"_divpart_other_scores.pdf"), width = 18, height = 10)
+ggsave(paste0("figures/",platform,"_divpart_other_scores.pdf"), width = 18, height = 8)
 
 ## prevalences ----
 system("Rscripts/freq_count.sh")
@@ -1801,7 +1805,7 @@ survey_data <- read_rds("data/survey_data_r.rds") %>% filter(country == "USA") %
   na.omit() %>% mutate(leftright = case_when(leftright < 6 ~ -1, leftright >= 6 & leftright <= 6 ~ 0, leftright > 6 ~ 1)) 
 
 us <- read_csv(paste0("processed_data/",platform,"/news_only/us.csv")) %>% mutate(country = "USA")
-us$political[de$political == ""] <- "non-political"
+us$political[us$political == ""] <- "non-political"
 us <- us %>% left_join(survey_data, by = "panelist_id")
 us <- us %>% filter(duration>10)
 overall_ideo <- mean(us$leftright, na.rm = TRUE)
@@ -1863,7 +1867,8 @@ ggplot(k_int, aes(x= avg_align, y= align, size=(n_pop^.8))) +
   scale_size(range = c(1,8)) +
   facet_wrap(~meta, nrow = 4, scales = "free_y")+
   theme(#axis.title = element_blank(),
-    axis.text = element_text(size = 11),
+    axis.text = element_text(size = 14),
+    axis.title = element_text(size = 18),
     legend.position = "none",
     legend.text = element_blank(),
     legend.title = element_blank()) +
