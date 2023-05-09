@@ -2178,49 +2178,49 @@ ggplot(dat,aes(y = Estimate, x = factor(threshold))) +
                   aes(ymin = CI_lower, ymax = CI_upper, color = level1), size=0.32,
                   position = position_dodge2(w = 0.4)) +
   scale_color_manual(values = c(
-    "##E69F00", "##009E73", "##0072B2", "##D55E00", "##CC79A7","grey25"),
+    "#E69F00", "#009E73", "#0072B2", "#D55E00", "#CC79A7","grey25"),
     name="(A) Country",
     guide = guide_legend(title.position = "left", order = 1,nrow=3))+
   ggnewscale::new_scale_color()+
   geom_pointrange(data=dat[str_detect(dat$level,"\\(B\\)"),],shape=16,
                   aes(ymin = CI_lower, ymax = CI_upper, color = level1), size=0.32, 
                   position = position_dodge2(w = 0.4)) +
-  scale_color_manual(values = c("##E69F00", "##009E73"),
+  scale_color_manual(values = c("#E69F00", "#009E73"),
                      name="(B) Political Interest",
                      guide = guide_legend(title.position = "left", order = 2,nrow=2))+
   ggnewscale::new_scale_color()+
   geom_pointrange(data=dat[str_detect(dat$level,"\\(C\\)"),],shape=17,
                   aes(ymin = CI_lower, ymax = CI_upper, color = level1), size=0.32,
                   position = position_dodge2(w = 0.4)) +
-  scale_color_manual(values = c("##E69F00", "##009E73", "##0072B2", "##D55E00","##CC79A7"),
+  scale_color_manual(values = c("#E69F00", "#009E73", "#0072B2", "#D55E00","#CC79A7"),
                      name="(C) News Access",
                      guide = guide_legend(title.position = "left", order = 3,nrow=3))+
   ggnewscale::new_scale_color()+
   geom_pointrange(data=dat[str_detect(dat$level,"\\(D\\)"),],shape=7,
                   aes(ymin = CI_lower, ymax = CI_upper, color = level1), size=0.32,
                   position = position_dodge2(w = 0.4)) +
-  scale_color_manual(values = c("##E69F00", "##009E73", "##0072B2", "##D55E00","##CC79A7"),
+  scale_color_manual(values = c("#E69F00", "#009E73", "#0072B2", "#D55E00","#CC79A7"),
                      name="(D) Political Extremity",
                      guide = guide_legend(title.position = "left", order = 4,nrow=2))+
   ggnewscale::new_scale_color()+
   geom_pointrange(data=dat[str_detect(dat$level,"\\(E\\)"),],shape=8,
                   aes(ymin = CI_lower, ymax = CI_upper, color = level1), size=0.32,
                   position = position_dodge2(w = 0.4)) +
-  scale_color_manual(values = c("##E69F00", "##009E73", "##0072B2", "##D55E00","##CC79A7"),
+  scale_color_manual(values = c("#E69F00", "#009E73", "#0072B2", "#D55E00","#CC79A7"),
                      name="(E) Generation",
                      guide = guide_legend(title.position = "left", order = 5,nrow=2))+
   ggnewscale::new_scale_color()+
   geom_pointrange(data=dat[str_detect(dat$level,"\\(F\\)"),],shape=9,
                   aes(ymin = CI_lower, ymax = CI_upper, color = level1), size=0.32,
                   position = position_dodge2(w = 0.4)) +
-  scale_color_manual(values = c("##E69F00", "##009E73", "##0072B2", "##D55E00","##CC79A7"),
+  scale_color_manual(values = c("#E69F00", "#009E73", "#0072B2", "#D55E00","#CC79A7"),
                      name="(F) Gender",
                      guide = guide_legend(title.position = "left", order = 6,nrow=2))+
   ggnewscale::new_scale_color()+
   geom_pointrange(data=dat[str_detect(dat$level,"\\(G\\)"),],shape=10,
                   aes(ymin = CI_lower, ymax = CI_upper, color = level1), size=0.32,
                   position = position_dodge2(w = 0.4)) +
-  scale_color_manual(values = c("##E69F00", "##009E73", "##0072B2", "##D55E00","##CC79A7"),
+  scale_color_manual(values = c("#E69F00", "#009E73", "#0072B2", "#D55E00","#CC79A7"),
                      name="(G) Education",
                      guide = guide_legend(title.position = "left", order = 7,nrow=2))+
   facet_grid(type~header, scales = "free_x") +
@@ -2236,3 +2236,68 @@ ggplot(dat,aes(y = Estimate, x = factor(threshold))) +
   geom_hline(yintercept = 0, linetype = "dashed")
 
 ggsave(paste0("figures/",platform,"_regression_conditional_continuous.pdf"), width = 18, height = 10)
+
+## Fletcher scores ----
+# Partisan slant/news diets ----
+# The ideology variable is centered around the respective country mean
+# The centering takes int account that the news audience in some countries as a whole more strongly lean to 
+# the left or right than in others
+# Technically, the centering makes the analyses more compatible with the regression 
+# analyses and the estimates more stable
+#
+# Following Flaxman et al., we use the standard deviation of news diets (consequences are neglible,
+# simply produces a little higher values by giving more extreme news diets a little more weight from the outset)
+non_pol <- lapply(cutoffs,function(y) {
+  sapply(fl,function(x){
+    dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
+    if(fixN){
+      peeps <- dt[duration>=120]
+      peeps <- unique(peeps[["panelist_id"]])
+      dt <- dt[panelist_id%in%peeps]
+    }
+    dt[survey, on = .(panelist_id), leftright := leftright]
+    dt <- dt[!is.na(leftright)]
+    dt[,`:=`(leftright=fcase(leftright < 6,-1,leftright > 6,1,default = 0))]
+    mean_ideo <- mean(unique(dt[,.(panelist_id,leftright)])[["leftright"]])
+    
+    dt <- dt[political=="" & duration>=y]
+    
+    # calculate the ideological slant of the individual participants news diets
+    dom_align <- dt[,.(align=mean(leftright,na.rm=TRUE) - mean_ideo),by = .(domain)]
+    dom_align[,align:=fcase(align< -.2,-1,align>= -.2 & align<= .2,0,align>0.2,1)]
+    dt[dom_align, on = .(domain), dom_align:= align]
+    dt1 <- dt[,.(diet_slant=mean(dom_align,na.rm = TRUE)), by = .(panelist_id)]
+    dt1[,diet_slant:=fcase(diet_slant==-1,1,diet_slant> -1 &diet_slant< 1,0,diet_slant==1,1)]
+    mean(dt1[["diet_slant"]])
+  })
+})
+
+pol <- lapply(cutoffs,function(y) {
+  sapply(fl,function(x){
+    dt <- data.table::fread(paste0("processed_data/",platform,"/news_only/",x))
+    if(fixN){
+      peeps <- dt[duration>=120]
+      peeps <- unique(peeps[["panelist_id"]])
+      dt <- dt[panelist_id%in%peeps]
+    }
+    dt[survey, on = .(panelist_id), leftright := leftright]
+    dt <- dt[!is.na(leftright)]
+    dt[,`:=`(leftright=fcase(leftright < 6,-1,leftright > 6,1,default = 0))]
+    mean_ideo <- mean(unique(dt[,.(panelist_id,leftright)])[["leftright"]])
+    
+    dt <- dt[political=="political" & duration>=y]
+    
+    # calculate the ideological slant of the individual participants news diets
+    dom_align <- dt[,.(align=mean(leftright,na.rm=TRUE) - mean_ideo),by = .(domain)]
+    dom_align[,align:=fcase(align< -.2,-1,align>= -.2 & align<= .2,0,align>0.2,1)]
+    dt[dom_align, on = .(domain), dom_align:= align]
+    dt1 <- dt[,.(diet_slant=mean(dom_align,na.rm = TRUE)), by = .(panelist_id)]
+    dt1[,diet_slant:=fcase(diet_slant==-1,1,diet_slant> -1 &diet_slant< 1,0,diet_slant==1,1)]
+    mean(dt1[["diet_slant"]])
+  })
+})
+
+combine_results(non_pol,pol) |> 
+  pivot_longer(cols=c(non_political,political),names_to = "news_type",values_to = "score") |> 
+  ggplot(aes(x=as.factor(cutoff),y = score,color=news_type))+
+  geom_point()+facet_wrap(case~.)
