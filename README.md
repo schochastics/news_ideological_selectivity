@@ -25,3 +25,5 @@ The following scripts are included:
 - `helpers.R`: auxiliary functions used in other scripts
 - `00_process_data_raw.R`: processes the raw data
 - `04_paper_analyses.R`: main analysis script
+
+Use `renv::restore()` to install required R package with the correct version
