@@ -2238,7 +2238,6 @@ ggplot(dat,aes(y = Estimate, x = factor(threshold))) +
 ggsave(paste0("figures/",platform,"_regression_conditional_continuous.pdf"), width = 18, height = 10)
 
 ## Fletcher scores ----
-# Partisan slant/news diets ----
 # The ideology variable is centered around the respective country mean
 # The centering takes int account that the news audience in some countries as a whole more strongly lean to 
 # the left or right than in others
