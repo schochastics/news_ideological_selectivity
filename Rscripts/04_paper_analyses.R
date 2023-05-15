@@ -101,6 +101,10 @@ p <- ggplot(plt_tbl, aes(x = as.factor(cutoff), y = value, color = name)) +
   scale_y_continuous(labels = scales::label_percent()) +
   guides(fill = guide_legend(override.aes = list(size = 3)))
 
+if (!dir.exists("figures")) {
+    dir.create("figures")
+}
+
 ggsave(paste0("figures/", platform, "_figure1.pdf"), p, width = 10, height = 4)
 
 ## ----------------------------------------------------------------------------##
@@ -155,7 +159,7 @@ pol <- lapply(cutoffs, function(y) {
 })
 
 combine_results(non_pol, pol) |>
-  saveRDS(paste0("processed_data/", platform, "_segregation_scores.RDS"))
+  saveRDS(paste0("processed_data/stats/", platform, "_segregation_scores.RDS"))
 
 ## dissimilarity index -----
 non_pol <- lapply(cutoffs, function(y) {
@@ -2424,7 +2428,7 @@ tidy_toplot_integrated <- tidy_toplot_integrated %>%
 write_csv(tidy_toplot_integrated, paste0("processed_data/regression/", platform, "_conditional_effects_continuous.csv"))
 
 #### Plotting ----
-tidy_toplot_integrated <- read_csv(paste0("processed_data/regression/", platform, "_conditional_effects.csv"))
+tidy_toplot_integrated <- read_csv(paste0("processed_data/regression/", platform, "_conditional_effects_continuous.csv"))
 dat <- tidy_toplot_integrated |>
   mutate(level = str_replace_all(level, "\\(B\\) Access", "\\(C\\) News Access")) |>
   mutate(level = str_replace_all(level, "\\(C\\) Political Interest", "\\(B\\) Political Interest")) |>
@@ -2583,5 +2587,20 @@ pol <- lapply(cutoffs, function(y) {
 combine_results(non_pol, pol) |>
   pivot_longer(cols = c(non_political, political), names_to = "news_type", values_to = "score") |>
   ggplot(aes(x = as.factor(cutoff), y = score, color = news_type)) +
-  geom_point() +
-  facet_wrap(case ~ .)
+  geom_point()+
+  scale_color_manual(
+    values = c("political" = "#AA8939", "non_political" = "#303C74"),
+    labels = c("Political news", "Non-political news"), name = ""
+  ) +
+  theme_bw() +
+  theme(
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 18),
+    legend.position = "bottom",
+    strip.text = element_text(size = 10),
+    legend.text = element_text(size = 18)
+  )+
+  facet_wrap(case ~ .)+
+  labs(x="cutoff")
+
+ggsave("figures/fletcher_revision.pdf",width = 8, height = 5)
