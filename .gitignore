@@ -16,3 +16,11 @@ Rscripts/01_create_networks.R
 Rscripts/02_analyze_networks.R
 Rscripts/03_analyze_data.R
 Rscripts/old/
+paper/
+processed_data/all
+processed_data/both_*
+processed_data/desk*
+processed_data/mob_*
+Rscripts/9*
+Rscripts/freq*
+Rscripts/05*
