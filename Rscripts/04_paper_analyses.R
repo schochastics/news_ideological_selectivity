@@ -80,11 +80,15 @@ plt_tbl <- map_dfr(seq_along(vis_cnt_lst), function(x) {
     pivot_longer(cols = c(non_pol, pol)) |>
     mutate(name = ifelse(name == "pol", "political news", "non-political news"))
 
-p <- ggplot(plt_tbl, aes(x = as.factor(cutoff), y = value, color = name)) +
+p <- ggplot(plt_tbl, aes(x = as.factor(cutoff), y = value, color = name, shape = name)) +
     geom_point() +
     geom_hline(yintercept = 0, linetype = "dashed", color = "transparent") +
     scale_color_manual(
         values = c("political news" = "#AA8939", "non-political news" = "#303C74"),
+        labels = c("Political news", "Non-political news"), name = ""
+    ) +
+    scale_shape_manual(
+        values = c("political news" = 16, "non-political news" = 17),
         labels = c("Political news", "Non-political news"), name = ""
     ) +
     facet_grid(. ~ case, scales = "free_y") +
@@ -426,11 +430,15 @@ res_tbl <- map_dfr(seq_along(result_files), function(x) {
 })
 
 
-ggplot(res_tbl, aes(x = as.factor(cutoff), y = score, color = news_type)) +
+ggplot(res_tbl, aes(x = as.factor(cutoff), y = score, color = news_type, shape = news_type)) +
     geom_point() +
     geom_hline(yintercept = 0, linetype = "dashed", color = "transparent") +
     scale_color_manual(
         values = c("political" = "#AA8939", "non_political" = "#303C74"),
+        labels = c("Political news", "Non-political news"), name = ""
+    ) +
+    scale_shape_manual(
+        values = c("political" = 16, "non_political" = 17),
         labels = c("Political news", "Non-political news"), name = ""
     ) +
     facet_grid(type ~ case, scales = "free_y") +
@@ -1310,14 +1318,18 @@ bind_rows(
 ) |>
     pivot_longer(cols = c(non_political, political)) |>
     mutate(name = ifelse(name == "political", "political news", "non-political news")) |>
-    ggplot(aes(x = factor(cutoff), y = value, col = name)) +
-    geom_point() +
+    ggplot(aes(x = factor(cutoff), y = value, col = name, shape = name)) +
+    geom_point(size=3) +
     geom_hline(yintercept = 0, linetype = "dashed", color = "transparent") +
     scale_color_manual(
         values = c(
             "political news" = "#AA8939",
             "non-political news" = "#303C74"
         ),
+        labels = c("Political news", "Non-political news"), name = ""
+    ) +
+    scale_shape_manual(
+        values = c("political news" = 16, "non-political news" = 17),
         labels = c("Political news", "Non-political news"), name = ""
     ) +
     facet_grid(type ~ case, scales = "free_y") +
@@ -1344,14 +1356,18 @@ bind_rows(
 ) |>
     pivot_longer(cols = c(non_political, political)) |>
     mutate(name = ifelse(name == "political", "political news", "non-political news")) |>
-    ggplot(aes(x = factor(cutoff), y = value, col = name)) +
-    geom_point() +
+    ggplot(aes(x = factor(cutoff), y = value, col = name, shape = name)) +
+    geom_point(size=3) +
     geom_hline(yintercept = 0, linetype = "dashed", color = "transparent") +
     scale_color_manual(
         values = c(
             "political news" = "#AA8939",
             "non-political news" = "#303C74"
         ),
+        labels = c("Political news", "Non-political news"), name = ""
+    ) +
+    scale_shape_manual(
+        values = c("political news" = 16, "non-political news" = 17),
         labels = c("Political news", "Non-political news"), name = ""
     ) +
     facet_grid(type ~ case, scales = "free_y") +
@@ -1632,11 +1648,15 @@ tidy_toplot |>
     filter((term %in% to_keep)) |>
     ggplot(aes(y = Estimate, x = factor(threshold))) +
     geom_pointrange(
-        aes(ymin = CI_lower, ymax = CI_upper, color = type),
-        position = position_dodge(0.6)
+        aes(ymin = CI_lower, ymax = CI_upper, color = type,shape = type),
+        position = position_dodge(0.6),size=1
     ) +
     scale_color_manual(
         values = c("Political News" = "#AA8939", "Non-political News" = "#303C74"),
+        labels = c("Political news", "Non-political news"), name = ""
+    ) +
+    scale_shape_manual(
+        values = c("Political News" = 16, "Non-political News" = 17),
         labels = c("Political news", "Non-political news"), name = ""
     ) +
     coord_flip() +
@@ -1900,10 +1920,14 @@ summary_scores <- bind_rows(sum_stat_diverse, sum_stat_partisan) |>
 
 ggplot(summary_scores, aes(y = score, x = factor(cutoff))) +
     geom_point(
-        aes(color = type)
+        aes(color = type,shape=type), size = 3
     ) +
     scale_color_manual(
         values = c("Political News" = "#AA8939", "Non-political News" = "#303C74"),
+        labels = c("Political news", "Non-political news"), name = ""
+    ) +
+    scale_shape_manual(
+        values = c("Political News" = 16, "Non-political News" = 17),
         labels = c("Political news", "Non-political news"), name = ""
     ) +
     theme_bw() +
