@@ -58,6 +58,8 @@ vis_cnt_lst <- map(seq_along(fl), function(i) {
     df <- fread(paste0("processed_data/", platform, "/news_only/", fl[i]))
     n <- length(unique(df[duration >= 3][["panelist_id"]]))
     # n1 <- length(unique(df[["panelist_id"]][df[["political"]]=="political"]))
+    # ctr <- ifelse(long_cases[i]=="United Kingdom","UK",long_cases[i])
+    n <- c(1055,1342,1444,1436,1090,1387)[i]
     fracs <- sapply(cutoffs, function(x) {
         tmp1 <- length(unique(df[duration >= x & political == "political"][["panelist_id"]])) / n
         tmp2 <- length(unique(df[duration >= x][["panelist_id"]])) / n
@@ -85,11 +87,11 @@ p <- ggplot(plt_tbl, aes(x = as.factor(cutoff), y = value, color = name, shape =
     geom_hline(yintercept = 0, linetype = "dashed", color = "transparent") +
     scale_color_manual(
         values = c("political news" = "#AA8939", "non-political news" = "#303C74"),
-        labels = c("Political news", "Non-political news"), name = ""
+        labels = c("political news" = "Political news", "non-political news" = "Non-political news"), name = ""
     ) +
     scale_shape_manual(
         values = c("political news" = 16, "non-political news" = 17),
-        labels = c("Political news", "Non-political news"), name = ""
+        labels = c("political news" = "Political news", "non-political news" = "Non-political news"), name = ""
     ) +
     facet_grid(. ~ case, scales = "free_y") +
     theme_bw() +
@@ -431,15 +433,15 @@ res_tbl <- map_dfr(seq_along(result_files), function(x) {
 
 
 ggplot(res_tbl, aes(x = as.factor(cutoff), y = score, color = news_type, shape = news_type)) +
-    geom_point() +
+    geom_point(size=3) +
     geom_hline(yintercept = 0, linetype = "dashed", color = "transparent") +
     scale_color_manual(
         values = c("political" = "#AA8939", "non_political" = "#303C74"),
-        labels = c("Political news", "Non-political news"), name = ""
+        labels = c("political" = "Political news", "non_political" = "Non-political news"), name = ""
     ) +
     scale_shape_manual(
         values = c("political" = 16, "non_political" = 17),
-        labels = c("Political news", "Non-political news"), name = ""
+        labels = c("political" = "Political news", "non_political" = "Non-political news"), name = ""
     ) +
     facet_grid(type ~ case, scales = "free_y") +
     theme_bw() +
@@ -1326,11 +1328,11 @@ bind_rows(
             "political news" = "#AA8939",
             "non-political news" = "#303C74"
         ),
-        labels = c("Political news", "Non-political news"), name = ""
+        labels = c("political news" = "Political news", "non-political news" = "Non-political news"), name = ""
     ) +
     scale_shape_manual(
         values = c("political news" = 16, "non-political news" = 17),
-        labels = c("Political news", "Non-political news"), name = ""
+        labels = c("political news" = "Political news", "non-political news" = "Non-political news"), name = ""
     ) +
     facet_grid(type ~ case, scales = "free_y") +
     theme_bw() +
@@ -1364,11 +1366,11 @@ bind_rows(
             "political news" = "#AA8939",
             "non-political news" = "#303C74"
         ),
-        labels = c("Political news", "Non-political news"), name = ""
+        labels = c("political news" = "Political news", "non-political news" = "Non-political news"), name = ""
     ) +
     scale_shape_manual(
         values = c("political news" = 16, "non-political news" = 17),
-        labels = c("Political news", "Non-political news"), name = ""
+        labels = c("political news" = "Political news", "non-political news" = "Non-political news"), name = ""
     ) +
     facet_grid(type ~ case, scales = "free_y") +
     theme_bw() +
@@ -1653,11 +1655,11 @@ tidy_toplot |>
     ) +
     scale_color_manual(
         values = c("Political News" = "#AA8939", "Non-political News" = "#303C74"),
-        labels = c("Political news", "Non-political news"), name = ""
+        labels = c("Political News" = "Political news", "Non-political News" = "Non-political news"), name = ""
     ) +
     scale_shape_manual(
         values = c("Political News" = 16, "Non-political News" = 17),
-        labels = c("Political news", "Non-political news"), name = ""
+        labels = c("Political News" = "Political news", "Non-political News" = "Non-political news"), name = ""
     ) +
     coord_flip() +
     theme_bw() +
@@ -1924,11 +1926,11 @@ ggplot(summary_scores, aes(y = score, x = factor(cutoff))) +
     ) +
     scale_color_manual(
         values = c("Political News" = "#AA8939", "Non-political News" = "#303C74"),
-        labels = c("Political news", "Non-political news"), name = ""
+        labels = c("Political News" = "Political news", "Non-political News" = "Non-political news"), name = ""
     ) +
     scale_shape_manual(
         values = c("Political News" = 16, "Non-political News" = 17),
-        labels = c("Political news", "Non-political news"), name = ""
+        labels = c("Political News" = "Political news", "Non-political News" = "Non-political news"), name = ""
     ) +
     theme_bw() +
     facet_grid(meta2 ~ meta, scales = "free_y") +
