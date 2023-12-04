@@ -58,8 +58,7 @@ vis_cnt_lst <- map(seq_along(fl), function(i) {
     df <- fread(paste0("processed_data/", platform, "/news_only/", fl[i]))
     n <- length(unique(df[duration >= 3][["panelist_id"]]))
     # n1 <- length(unique(df[["panelist_id"]][df[["political"]]=="political"]))
-    # ctr <- ifelse(long_cases[i]=="United Kingdom","UK",long_cases[i])
-    n <- c(1055,1342,1444,1436,1090,1387)[i]
+    # n <- c(3135,1658,1473,1454,1496,1505)[i]
     fracs <- sapply(cutoffs, function(x) {
         tmp1 <- length(unique(df[duration >= x & political == "political"][["panelist_id"]])) / n
         tmp2 <- length(unique(df[duration >= x][["panelist_id"]])) / n
