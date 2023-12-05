@@ -58,10 +58,10 @@ vis_cnt_lst <- map(seq_along(fl), function(i) {
     df <- fread(paste0("processed_data/", platform, "/news_only/", fl[i]))
     n <- length(unique(df[duration >= 3][["panelist_id"]]))
     # n1 <- length(unique(df[["panelist_id"]][df[["political"]]=="political"]))
-    # n <- c(3135,1658,1473,1454,1496,1505)[i]
+    adjust_to_all <- c(0.8662,0.9405,0.9193,0.9064,0.9257,0.8667)[i]
     fracs <- sapply(cutoffs, function(x) {
-        tmp1 <- length(unique(df[duration >= x & political == "political"][["panelist_id"]])) / n
-        tmp2 <- length(unique(df[duration >= x][["panelist_id"]])) / n
+        tmp1 <- length(unique(df[duration >= x & political == "political"][["panelist_id"]])) / n * adjust_to_all
+        tmp2 <- length(unique(df[duration >= x][["panelist_id"]])) / n * adjust_to_all
         c(tmp1, tmp2)
     })
     res_visitors$pol <- fracs[1, ]
@@ -111,7 +111,7 @@ if (!dir.exists("figures")) {
     dir.create("figures")
 }
 
-ggsave(paste0("figures/", platform, "_figure1.pdf"), p, width = 10, height = 4)
+ggsave(paste0("figures/", platform, "_figure1_adjusted.pdf"), p, width = 10, height = 4)
 
 ## ----------------------------------------------------------------------------##
 # Comparison pol/nonpol ----
