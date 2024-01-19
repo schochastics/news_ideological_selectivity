@@ -58,7 +58,7 @@ vis_cnt_lst <- map(seq_along(fl), function(i) {
     df <- fread(paste0("processed_data/", platform, "/news_only/", fl[i]))
     n <- length(unique(df[duration >= 3][["panelist_id"]]))
     # n1 <- length(unique(df[["panelist_id"]][df[["political"]]=="political"]))
-    adjust_to_all <- c(0.8662,0.9405,0.9193,0.9064,0.9257,0.8667)[i]
+    # adjust_to_all <- c(0.8662,0.9405,0.9193,0.9064,0.9257,0.8667)[i]
     fracs <- sapply(cutoffs, function(x) {
         tmp1 <- length(unique(df[duration >= x & political == "political"][["panelist_id"]])) / n * adjust_to_all
         tmp2 <- length(unique(df[duration >= x][["panelist_id"]])) / n * adjust_to_all
@@ -111,7 +111,7 @@ if (!dir.exists("figures")) {
     dir.create("figures")
 }
 
-ggsave(paste0("figures/", platform, "_figure1_adjusted.pdf"), p, width = 10, height = 4)
+ggsave(paste0("figures/", platform, "_figure1.pdf"), p, width = 10, height = 4)
 
 ## ----------------------------------------------------------------------------##
 # Comparison pol/nonpol ----
@@ -1643,7 +1643,10 @@ tidy_toplot <- tidy_toplot |>
             "non_political" = "Non-political News",
             "political" = "Political News"
         )
-    )
+    ) |> 
+    mutate(meta=str_replace_all(meta,"Bakshy et al.","Bakshy et al. [54]")) |> 
+    mutate(meta=str_replace_all(meta,"Budak et al.","Budak et al. [43]")) |> 
+    mutate(meta=str_replace_all(meta,"Robertson et al.","Robertson et al. [80]"))
 
 tidy_toplot |>
     filter((term %in% to_keep)) |>
@@ -1916,7 +1919,10 @@ summary_scores <- bind_rows(sum_stat_diverse, sum_stat_partisan) |>
             "non-political" = "Non-political News",
             "political" = "Political News"
         )
-    )
+    ) |> 
+    mutate(meta=str_replace_all(meta,"Bakshy et al.","Bakshy et al. [54]")) |> 
+    mutate(meta=str_replace_all(meta,"Budak et al.","Budak et al. [43]")) |> 
+    mutate(meta=str_replace_all(meta,"Robertson et al.","Robertson et al. [80]"))
 
 
 ggplot(summary_scores, aes(y = score, x = factor(cutoff))) +
