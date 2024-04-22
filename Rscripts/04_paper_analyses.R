@@ -314,6 +314,58 @@ pol <- lapply(cutoffs, function(y) {
 combine_results(non_pol, pol) |>
     saveRDS(paste0("processed_data/stats/", platform, "_news_diet_slant.RDS"))
 
+
+# Sqrt 2 version for 2nd revision
+non_pol <- lapply(cutoffs, function(y) {
+    sapply(fl, function(x) {
+        dt <- data.table::fread(paste0("processed_data/", platform, "/news_only/", x))
+        if (fixN) {
+            peeps <- dt[duration >= 120]
+            peeps <- unique(peeps[["panelist_id"]])
+            dt <- dt[panelist_id %in% peeps]
+        }
+        dt[survey, on = .(panelist_id), leftright := leftright]
+        dt <- dt[!is.na(leftright)]
+        dt[, `:=`(leftright = fcase(leftright < 6, 0, leftright > 6, 1, default = 0.5))]
+        mean_ideo <- mean(unique(dt[, .(panelist_id, leftright)])[["leftright"]])
+
+        dt <- dt[political == "" & duration >= y]
+
+        # calculate the ideological slant of the individual participants news diets
+        dom_align <- dt[, .(align = mean(leftright, na.rm = TRUE) - mean_ideo), by = .(domain)]
+        dt[dom_align, on = .(domain), dom_align := align]
+        dt1 <- dt[, .(diet_slant = mean(dom_align, na.rm = TRUE)), by = .(panelist_id)]
+        sd(dt1[["diet_slant"]])*sqrt(2)
+    })
+})
+
+pol <- lapply(cutoffs, function(y) {
+    sapply(fl, function(x) {
+        dt <- data.table::fread(paste0("processed_data/", platform, "/news_only/", x))
+        if (fixN) {
+            peeps <- dt[duration >= 120]
+            peeps <- unique(peeps[["panelist_id"]])
+            dt <- dt[panelist_id %in% peeps]
+        }
+        dt[survey, on = .(panelist_id), leftright := leftright]
+        dt <- dt[!is.na(leftright)]
+        dt[, `:=`(leftright = fcase(leftright < 6, 0, leftright > 6, 1, default = 0.5))]
+        mean_ideo <- mean(unique(dt[, .(panelist_id, leftright)])[["leftright"]])
+
+        dt <- dt[political == "political" & duration >= y]
+
+        # calculate the ideological slant of the individual participants news diets
+        dom_align <- dt[, .(align = mean(leftright, na.rm = TRUE) - mean_ideo), by = .(domain)]
+        dt[dom_align, on = .(domain), dom_align := align]
+        dt1 <- dt[, .(diet_slant = mean(dom_align, na.rm = TRUE)), by = .(panelist_id)]
+        sd(dt1[["diet_slant"]])*sqrt(2)
+    })
+})
+
+combine_results(non_pol, pol) |>
+    saveRDS(paste0("processed_data/stats/", platform, "_news_diet_slant_01sqrt2.RDS"))
+
+
 # Diversity measures ----
 ## Simpson Diversity ----
 non_pol <- lapply(cutoffs, function(y) {
@@ -422,7 +474,7 @@ result_files <- paste0(platform, c(
     "_simpson_diversity.RDS",
     "_news_diet_slant.RDS"
 ))
-types <- c("(A) Ideological Segregation", "(B) News Diet Diversity", "(C) Partisanship in News Diets")
+types <- c("(A) Isolation", "(B) Simpson's D", "(C) News Diet Slant (SD)")
 
 res_tbl <- map_dfr(seq_along(result_files), function(x) {
     readRDS(paste0("processed_data/stats/", result_files[x])) |>
@@ -457,6 +509,48 @@ ggplot(res_tbl, aes(x = as.factor(cutoff), y = score, color = news_type, shape =
     guides(colour = guide_legend(override.aes = list(size = 3)))
 
 ggsave(paste0("figures/", platform, "_figure2.pdf"), width = 16, height = 10)
+
+# revision figure comparing News diet slant ----
+# Figure 2 for Paper----
+result_files <- paste0(platform, c(
+    "_news_diet_slant.RDS",
+    "_news_diet_slant_01sqrt2.RDS"
+))
+types <- c("(A) News Diet Slant (SD)", "(B) News Diet Slant (SD2)")
+
+res_tbl <- map_dfr(seq_along(result_files), function(x) {
+    readRDS(paste0("processed_data/stats/", result_files[x])) |>
+        mutate(type = types[x]) |>
+        pivot_longer(cols = c(non_political, political), names_to = "news_type", values_to = "score")
+})
+
+
+ggplot(res_tbl, aes(x = as.factor(cutoff), y = score, color = news_type, shape = news_type)) +
+    geom_point(size=3) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "transparent") +
+    scale_color_manual(
+        values = c("political" = "#AA8939", "non_political" = "#303C74"),
+        labels = c("political" = "Political news", "non_political" = "Non-political news"), name = ""
+    ) +
+    scale_shape_manual(
+        values = c("political" = 16, "non_political" = 17),
+        labels = c("political" = "Political news", "non_political" = "Non-political news"), name = ""
+    ) +
+    facet_grid(type ~ case, scales = "free_y") +
+    theme_bw() +
+    theme(
+        legend.position = "bottom",
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(family = "sans", size = 16),
+        axis.text.x = element_text(family = "sans", size = 14),
+        axis.title = element_text(family = "sans", size = 20),
+        strip.text = element_text(face = "bold"),
+        text = element_text(family = "sans", size = 16)
+    ) +
+    labs(x = "threshold (in sec)", y = "score") +
+    guides(colour = guide_legend(override.aes = list(size = 3)))
+
+ggsave(paste0("figures/", platform, "_news_diet_slants.pdf"), width = 16, height = 10)
 
 
 # Prepare Regression Data ----
@@ -1193,7 +1287,7 @@ ggplot(dat, aes(y = Estimate, x = factor(threshold))) +
         legend.direction = "horizontal"
     ) +
     # legend.title = element_blank()) +
-    labs(y = "ideological selectivity", x = "threshold (in sec)") +
+    labs(y = "", x = "threshold (in sec)") +
     geom_hline(yintercept = 0, linetype = "dashed")
 
 ggsave(paste0("figures/", platform, "_regression_conditional_reduced.pdf"), width = 12, height = 7)
@@ -1300,7 +1394,7 @@ ggplot(dat, aes(y = Estimate, x = factor(threshold))) +
         legend.direction = "horizontal"
     ) +
     # legend.title = element_blank()) +
-    labs(y = "ideological selectivity", x = "threshold (in sec)") +
+    labs(y = "", x = "threshold (in sec)") +
     geom_hline(yintercept = 0, linetype = "dashed")
 
 
@@ -1924,6 +2018,10 @@ summary_scores <- bind_rows(sum_stat_diverse, sum_stat_partisan) |>
     mutate(meta=str_replace_all(meta,"Budak et al.","Budak et al. [43]")) |> 
     mutate(meta=str_replace_all(meta,"Robertson et al.","Robertson et al. [80]"))
 
+summary_scores$meta2 <- ifelse(
+    grepl("News Diet Div",summary_scores$meta2),
+    "(A) Simpson's D", "(B) News Diet Slant (SD)"
+)
 
 ggplot(summary_scores, aes(y = score, x = factor(cutoff))) +
     geom_point(
