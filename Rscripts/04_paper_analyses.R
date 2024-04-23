@@ -2244,3 +2244,441 @@ ggplot(k_int, aes(x = avg_align, y = align, size = (n_pop^.8))) +
     ylab("(A) Present data")
 
 ggsave(paste0("figures/", platform, "_align_comparison.pdf"), width = 10, height = 16)
+
+
+# Density plots (new Figure 3) ----
+cutoffs <- c(3,120)
+non_pol <- lapply(cutoffs, function(y) {
+    lapply(fl, function(x) {
+        dt <- data.table::fread(paste0("processed_data/", platform, "/news_only/", x))
+        if (fixN) {
+            peeps <- dt[duration >= 120]
+            peeps <- unique(peeps[["panelist_id"]])
+            dt <- dt[panelist_id %in% peeps]
+        }
+        dt[survey, on = .(panelist_id), leftright := leftright]
+        dt <- dt[!is.na(leftright)]
+        dt[, `:=`(leftright = fcase(leftright < 6, -1, leftright > 6, 1, default = 0))]
+        mean_ideo <- mean(unique(dt[, .(panelist_id, leftright)])[["leftright"]])
+
+        dt <- dt[political == "" & duration >= y]
+
+        # calculate the ideological slant of the individual participants news diets
+        dom_align <- dt[, .(align = mean(leftright, na.rm = TRUE) - mean_ideo), by = .(domain)]
+        dt[dom_align, on = .(domain), dom_align := align]
+        dt1 <- dt[, .(diet_slant = mean(dom_align, na.rm = TRUE),leftright = mean(leftright,na.rm = TRUE)), by = .(panelist_id)]
+        dt1[,`:=`(political = "Non-political news",cutoff=y,country=x)]
+        dt1
+    })
+})
+
+pol <- lapply(cutoffs, function(y) {
+    lapply(fl, function(x) {
+        dt <- data.table::fread(paste0("processed_data/", platform, "/news_only/", x))
+        if (fixN) {
+            peeps <- dt[duration >= 120]
+            peeps <- unique(peeps[["panelist_id"]])
+            dt <- dt[panelist_id %in% peeps]
+        }
+        dt[survey, on = .(panelist_id), leftright := leftright]
+        dt <- dt[!is.na(leftright)]
+        dt[, `:=`(leftright = fcase(leftright < 6, -1, leftright > 6, 1, default = 0))]
+        mean_ideo <- mean(unique(dt[, .(panelist_id, leftright)])[["leftright"]])
+
+        dt <- dt[political == "political" & duration >= y]
+
+        # calculate the ideological slant of the individual participants news diets
+        dom_align <- dt[, .(align = mean(leftright, na.rm = TRUE) - mean_ideo), by = .(domain)]
+        dt[dom_align, on = .(domain), dom_align := align]
+        dt1 <- dt[, .(diet_slant = mean(dom_align, na.rm = TRUE),leftright = mean(leftright,na.rm = TRUE)), by = .(panelist_id)]
+        dt1[,`:=`(political = "Political news",cutoff=y,country=x)]
+        dt1
+    })
+})
+
+res <- rbind(
+    rbind(rbindlist(non_pol[[1]]),rbindlist(non_pol[[2]])),
+    rbind(rbindlist(pol[[1]]),rbindlist(pol[[2]]))
+)
+
+res[,country:=long_cases[match(str_remove(country,"\\.csv"),short_cases)]]
+saveRDS(res,paste0("processed_data/stats/", platform, "density_plots.RDS"))
+
+## plot
+dat <- readRDS(paste0("processed_data/stats/", platform, "density_plots.RDS"))
+
+outlets <- data.table(
+    domain = c("Spiegel", "Focus","El Peridodico","El Mundo","Le Monde", "Le Figaro","Repubblica","Mediaset","Gurdian","Daily Mail", "CNN", "Fox News"),
+    country= rep(long_cases,each = 2),
+    x = c(-0.41,0.39,-0.27,0.3,-0.4,0.2,-0.38,0.31,-0.43,0.43,-0.26,0.81),
+    y = 0
+)
+
+ggplot() + 
+    geom_density(data = dat[leftright!=0 & cutoff == 120],aes(x=diet_slant,color = as.factor(leftright),fill=as.factor(leftright)), alpha = 0.7) + 
+    geom_label(data=outlets,aes(x=x,y=y,label=domain),vjust = 0,size=3)+
+    scale_fill_manual(values = c("red","blue"),name = "", labels = c("Conservative","Liberal"))+
+    scale_colour_manual(values = c("red","blue"),name = "", labels = c("Conservative","Liberal"))+
+    facet_grid(country~political,scale = "free_y")+
+    theme_bw() +
+    theme(
+        legend.position = "bottom",
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(family = "sans", size = 16),
+        axis.text.x = element_text(family = "sans", size = 14),
+        axis.title = element_text(family = "sans", size = 20),
+        strip.text = element_text(face = "bold"),
+        text = element_text(family = "sans", size = 16)
+    ) +
+    labs(x="",y="") 
+
+ggsave(paste0("figures/", platform, "_density_plot_main.pdf"), height = 16, width = 10)
+
+ggplot() + 
+    geom_density(data = dat[leftright!=0 & cutoff == 3],aes(x=diet_slant,color = as.factor(leftright),fill=as.factor(leftright)), alpha = 0.7) + 
+    geom_label(data=outlets,aes(x=x,y=y,label=domain),vjust = 0,size=3)+
+    scale_fill_manual(values = c("red","blue"),name = "", labels = c("Conservative","Liberal"))+
+    scale_colour_manual(values = c("red","blue"),name = "", labels = c("Conservative","Liberal"))+
+    facet_grid(country~political,scale = "free_y")+
+    theme_bw() +
+    theme(
+        legend.position = "bottom",
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(family = "sans", size = 16),
+        axis.text.x = element_text(family = "sans", size = 14),
+        axis.title = element_text(family = "sans", size = 20),
+        strip.text = element_text(face = "bold"),
+        text = element_text(family = "sans", size = 16)
+    ) +
+    labs(x="",y="") 
+
+ggsave(paste0("figures/", platform, "_density_plot_appendix.pdf"), height = 16, width = 10)
+
+# density with alternative scores ----
+bakshy <- fread("data/bakshy_top500.txt")
+bakshy[, domain := str_replace_all(domain, "www\\.", "")]
+bakshy[, domain := fifelse(domain == "news.yahoo.com", "news.yahoo.com/NEWS", domain)]
+bakshy[, domain := fifelse(domain == "news.msn.com", "msn.com/NEWS", domain)]
+bakshy[, domain := fifelse(domain == "aol.com", "aol.com/NEWS", domain)]
+bakshy[, domain := fifelse(domain == "huffingtonpost.com", "huffpost.com", domain)]
+bakshy[, domain := fifelse(domain == "westernjournalism.com", "westernjournal.com", domain)]
+bakshy <- bakshy[!domain %in% c("msn.com", "twitter.com", "amazon.com", "youtube.com")]
+bakshy <- bakshy[, c("domain", "avg_align")]
+robertson_data <- fread("data/bias_scores.csv")
+us <- data.table::fread(paste0("processed_data/", platform, "/news_only/", "us.csv"))
+us[survey, on = .(panelist_id), leftright := leftright]
+us[, `:=`(leftright = fcase(leftright < 6, -1, leftright > 6, 1, default = 0))]
+us <- us[duration>=120 & !is.na(leftright)]
+overall_ideo <- mean(us[["leftright"]], na.rm = TRUE)
+
+current <- readRDS(paste0("processed_data/stats/", platform, "density_plots.RDS"))[cutoff==120 & country =="USA"][,c("panelist_id","diet_slant","leftright","political")]
+
+us <- bakshy[us, on = .(domain)]
+us <- robertson_data[us, on = .(domain)]
+dat <- us[,.(robertson = mean(score,na.rm=TRUE),
+      bakshy = mean(fb_score,na.rm = TRUE),
+      budak = mean(budak_score, na.rm = FALSE)*5,
+      allside_com = mean(allsides_score_community, na.rm=FALSE),
+      allside = mean(allsides_score, na.rm=FALSE),
+      pew = mean(pew_score, na.rm=FALSE),
+      mturk = mean(mturk_score, na.rm=FALSE)
+        ),
+    by=.(panelist_id,political)]
+
+dat <- dat[current, on = .(panelist_id)]
+dat[,i.political:=NULL]
+dat_melt <- melt(dat,id.vars=c("panelist_id","political","leftright"))
+dat_melt[,political:=fifelse(political=="","Non-political news","Political news")]
+dat_melt <- dat_melt[!is.na(value)]
+
+dat_melt[, variable:=fcase(
+    variable=="diet_slant","present data",
+    variable=="robertson","Robertson et al. [80] scores",
+    variable=="bakshy","Bakshy et al. [54] scores",
+    variable=="budak","Budak et al. [43] scores",
+    variable=="allside_com","Allside community scores",
+    variable=="allside","Allside controlled scores",
+    variable=="robertson","Robertson et al. [80] scores",
+    variable=="pew","PEW scores",
+    variable=="mturk","Mturk scores"
+)]
+levs <- unique(dat_melt$variable)[c(8,2,1,3,4,5,6,7)]
+dat_melt[, variable:=factor(variable,levels = levs)]
+
+outlets <- data.table(
+    variable = rep(c("present data", "Bakshy et al. [54] scores", "Robertson et al. [80] scores", 
+"Budak et al. [43] scores", "Allside community scores", "Allside controlled scores", 
+"PEW scores", "Mturk scores"), each = 2),
+    domain = rep(c("CNN","Fox News"),8),
+    value = c(-0.26,0.81,-0.27,0.78,-0.11,0.61,-0.03*5,0.13*5,-0.5,1.0,-0,0.5,-0.22,0.42,-0.66,0.25),
+    y=0
+)
+
+outlets$variable <- factor(outlets$variable,levels=levs)
+
+ggplot() + 
+    geom_density(data = dat_melt[leftright!=0],aes(x=value,color = as.factor(leftright),fill=as.factor(leftright)), alpha = 0.7) + 
+    geom_label(data=outlets,aes(x=value,y=y,label=domain),vjust = 0,size=3)+
+    scale_fill_manual(values = c("red","blue"),name = "", labels = c("Conservative","Liberal"))+
+    scale_colour_manual(values = c("red","blue"),name = "", labels = c("Conservative","Liberal"))+
+    facet_grid(variable~political,scale = "free_y")+
+    theme_bw() +
+    theme(
+        legend.position = "bottom",
+        panel.grid.minor = element_blank(),
+        legend.text = element_text(family = "sans", size = 16),
+        axis.text.x = element_text(family = "sans", size = 14),
+        axis.title = element_text(family = "sans", size = 20),
+        strip.text = element_text(face = "bold",size = 8),
+        text = element_text(family = "sans", size = 16)
+    ) +
+    labs(x="",y="") 
+
+ggsave(paste0("figures/", platform, "_density_plot_altscore.pdf"), height = 16, width = 10)
+
+## Regression less control
+
+# Prepare Regression Data ----
+# prepare Data
+survey_lm <- survey[, .(panelist_id, leftright, polinterest, extremism, age, female, edu, log_total_visits)]
+survey_lm <- na.omit(survey_lm)
+survey_lm[, extreme := (abs(leftright - 6) / 5)]
+survey_lm[, leftright := fcase(leftright < 6, -1, leftright == 6, 0, leftright > 6, 1)]
+survey_lm[, polinterest := polinterest * -1]
+survey_lm[, age := (age - 30) / 35]
+
+lm_dt <- lapply(seq_along(fl), function(i) {
+    dt <- fread(paste0("processed_data/", platform, "/news_only/", fl[i]))
+    dt[, country := long_cases[i]]
+    dt[, prev_type := fcase(
+        prev_type == "direct", "direct",
+        prev_type == "ebay", "direct",
+        prev_type == "news", "direct",
+        prev_type == "other", "direct",
+        prev_type == "facebook", "facebook",
+        prev_type == "twitter", "twitter",
+        prev_type == "search", "search",
+        prev_type == "portal", "portal"
+    )]
+    dt[, prev_type := as.factor(prev_type)]
+    dt[, political := ifelse(political == "", "non-political", political)]
+}) |> rbindlist()
+
+lm_dt <- lm_dt[!is.na(duration)]
+lm_dt <- lm_dt[survey_lm, on = .(panelist_id)]
+keep <- lm_dt[, .(max_visit = max(duration, na.rm = TRUE)), by = .(panelist_id)][max_visit >= 120][["panelist_id"]]
+lm_dt <- lm_dt[panelist_id %in% keep]
+lm_dt[, ideo_over := mean(leftright, na.rm = TRUE), by = country]
+
+non_pol <- map_dfr(cutoffs, function(x) {
+    dat <- lm_dt[political == "non-political" & duration >= x]
+    dat[, align := mean(leftright, na.rm = TRUE) - ideo_over, by = c("country", "domain")]
+    map_dfr(long_cases, function(ref) {
+        dat[country == ref][["country"]] <- "A_reference"
+        res <- lmer(align ~ 1 + as.factor(leftright) + 
+            country:as.factor(leftright) + country + prev_type + as.factor(polinterest) + (1 | panelist_id), data = dat)
+        lmer_to_tidy(res) |>
+            mutate(type = "non_political", threshold = x, level = ref) |>
+            dplyr::filter(term == "as.factor(leftright)1")
+    })
+})
+
+pol <- map_dfr(cutoffs, function(x) {
+    dat <- lm_dt[political == "political" & duration >= x]
+    dat[, align := mean(leftright, na.rm = TRUE) - ideo_over, by = c("country", "domain")]
+    map_dfr(long_cases, function(ref) {
+        dat[country == ref][["country"]] <- "A_reference"
+        res <- lmer(align ~ 1 + as.factor(leftright) + 
+            country:as.factor(leftright) + country + prev_type + as.factor(polinterest) + (1 | panelist_id), data = dat)
+        lmer_to_tidy(res) |>
+            mutate(type = "political", threshold = x, level = ref) |>
+            dplyr::filter(term == "as.factor(leftright)1")
+    })
+})
+
+tidy_toplot_country <- bind_rows(non_pol, pol) %>%
+    mutate(
+        header = "(A) Country",
+        level = as.factor(level),
+        level = dplyr::recode_factor(level,
+            "France" = "(A) Country: France",
+            "Germany" = "(A) Country: Germany",
+            "Italy" = "(A) Country: Italy",
+            "Spain" = "(A) Country: Spain",
+            "United Kingdom" = "(A) Country: United Kingdom",
+            "USA" = "(A) Country: USA"
+        )
+    )
+
+
+## Access (Conditional Effects Analysis)----
+reference <- c("direct", "facebook", "twitter", "search", "portal")
+lm_dt$prev_type <- as.character(lm_dt$prev_type)
+
+non_pol <- map_dfr(cutoffs, function(x) {
+    dat <- lm_dt[political == "non-political" & duration >= x]
+    dat[, align := mean(leftright, na.rm = TRUE) - ideo_over, by = c("country", "domain")]
+    map_dfr(reference, function(ref) {
+        dat[prev_type == ref][["prev_type"]] <- "A_reference"
+        res <- lmer(align ~ 1 + as.factor(leftright) + 
+            prev_type:as.factor(leftright) + country + prev_type + as.factor(polinterest) + (1 | panelist_id), data = dat)
+        lmer_to_tidy(res) |>
+            mutate(type = "non_political", threshold = x, level = ref) |>
+            dplyr::filter(term == "as.factor(leftright)1")
+    })
+})
+
+pol <- map_dfr(cutoffs, function(x) {
+    dat <- lm_dt[political == "political" & duration >= x]
+    dat[, align := mean(leftright, na.rm = TRUE) - ideo_over, by = c("country", "domain")]
+    map_dfr(reference, function(ref) {
+        dat[prev_type == ref][["prev_type"]] <- "A_reference"
+        res <- lmer(align ~ 1 + as.factor(leftright) + 
+            prev_type:as.factor(leftright) + country + prev_type + as.factor(polinterest) + (1 | panelist_id), data = dat)
+        lmer_to_tidy(res) |>
+            mutate(type = "political", threshold = x, level = ref) |>
+            dplyr::filter(term == "as.factor(leftright)1")
+    })
+})
+
+tidy_toplot_access <- bind_rows(non_pol, pol) %>%
+    mutate(
+        header = "(B) Access",
+        level = as.factor(level),
+        level = dplyr::recode_factor(level,
+            "direct" = "(B) Access: Direct",
+            "facebook" = "(B) Access: Facebook",
+            "twitter" = "(B) Access: Twitter",
+            "search" = "(B) Access: Search engines",
+            "portal" = "(B) Access: Portals"
+        )
+    )
+
+## Political interest (Conditional Effects Analysis) ----
+reference <- c("1", "4")
+lm_dt$polinterest <- -1 * lm_dt$polinterest
+
+non_pol <- map_dfr(cutoffs, function(x) {
+    dat <- lm_dt[political == "non-political" & duration >= x]
+    dat[, align := mean(leftright, na.rm = TRUE) - ideo_over, by = c("country", "domain")]
+    map_dfr(reference, function(ref) {
+        dat[polinterest == ref][["polinterest"]] <- 0
+        res <- lmer(align ~ 1 + as.factor(leftright) + 
+            as.factor(polinterest):as.factor(leftright) + country + prev_type + as.factor(polinterest) + (1 | panelist_id), data = dat)
+        lmer_to_tidy(res) |>
+            mutate(type = "non_political", threshold = x, level = ref) |>
+            dplyr::filter(term == "as.factor(leftright)1")
+    })
+})
+
+pol <- map_dfr(cutoffs, function(x) {
+    dat <- lm_dt[political == "political" & duration >= x]
+    dat[, align := mean(leftright, na.rm = TRUE) - ideo_over, by = c("country", "domain")]
+    map_dfr(reference, function(ref) {
+        dat[polinterest == ref][["polinterest"]] <- 0
+        res <- lmer(align ~ 1 + as.factor(leftright) + 
+            as.factor(polinterest):as.factor(leftright) + country + prev_type + as.factor(polinterest) + (1 | panelist_id), data = dat)
+        lmer_to_tidy(res) |>
+            mutate(type = "political", threshold = x, level = ref) |>
+            dplyr::filter(term == "as.factor(leftright)1")
+    })
+})
+
+tidy_toplot_interest <- bind_rows(non_pol, pol) |>
+    mutate(
+        header = "(C) Political Interest",
+        level = as.factor(level),
+        level = dplyr::recode_factor(level,
+            "1" = "(C) Political Interest: Low",
+            "4" = "(C) Political Interest: High"
+        )
+    )
+
+# Build single concise plot
+tidy_toplot_integrated <- bind_rows(
+    tidy_toplot_country, tidy_toplot_access,
+    tidy_toplot_interest
+)
+
+level_order <- rev(levels(tidy_toplot_integrated$header))
+tidy_toplot_integrated <- tidy_toplot_integrated %>%
+    mutate(
+        type = as.factor(type),
+        type = dplyr::recode_factor(type,
+            "non_political" = "Non-Political News",
+            "political" = "Political News"
+        )
+    )
+
+write_csv(tidy_toplot_integrated, paste0("processed_data/regression/", platform, "_conditional_effects_no_control.csv"))
+
+## Plotting ----
+### reduced ----
+tidy_toplot_integrated <- read_csv(paste0("processed_data/regression/", platform, "_conditional_effects_no_control.csv"))
+dat <- tidy_toplot_integrated |>
+    mutate(level = str_replace_all(level, "\\(B\\) Access", "\\(C\\) News Access")) |>
+    mutate(level = str_replace_all(level, "\\(C\\) Political Interest", "\\(B\\) Political Interest")) |>
+    mutate(level = str_replace_all(level, "Direct", "Non-referred")) |>
+    dplyr::filter(str_detect(level, "\\(A\\)|\\(B\\)|\\(C\\)")) |>
+    mutate(level1 = str_remove_all(level, "\\(.*\\).*\\:\\s")) |>
+    mutate(header = str_replace_all(header, "\\(B\\) Access", "\\(C\\) News Access")) |>
+    mutate(header = str_replace_all(header, "\\(C\\) Political Interest", "\\(B\\) Political Interest"))
+
+labels <- unique(dat$level1)
+names(labels) <- labels
+ggplot(dat, aes(y = Estimate, x = factor(threshold))) +
+    geom_pointrange(
+        data = dat[str_detect(dat$level, "\\(A\\)"), ], shape = 15,
+        aes(ymin = CI_lower, ymax = CI_upper, color = level1), size = 0.32,
+        position = position_dodge2(w = 0.4)
+    ) +
+    scale_shape_manual(values = c(
+        15, 15, 15, 15, 15,
+        16, 16, 16, 16,
+        17, 17, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11
+    ), name = "") +
+    scale_color_manual(
+        values = c(
+            "#E69F00", "#009E73", "#0072B2", "#D55E00", "#CC79A7", "grey25"
+        ),
+        name = "(A) Country",
+        guide = guide_legend(title.position = "left", order = 1, nrow = 2)
+    ) +
+    ggnewscale::new_scale_color() +
+    geom_pointrange(
+        data = dat[str_detect(dat$level, "\\(B\\)"), ], shape = 16,
+        aes(ymin = CI_lower, ymax = CI_upper, color = level1), size = 0.32,
+        position = position_dodge2(w = 0.4)
+    ) +
+    scale_color_manual(
+        values = c("#E69F00", "#009E73"),
+        name = "(B) Political Interest",
+        guide = guide_legend(title.position = "left", order = 2, nrow = 2)
+    ) +
+    ggnewscale::new_scale_color() +
+    geom_pointrange(
+        data = dat[str_detect(dat$level, "\\(C\\)"), ], shape = 17,
+        aes(ymin = CI_lower, ymax = CI_upper, color = level1), size = 0.32,
+        position = position_dodge2(w = 0.4)
+    ) +
+    scale_color_manual(
+        values = c("#E69F00", "#009E73", "#0072B2", "#D55E00", "#CC79A7"),
+        name = "(C) News Access",
+        guide = guide_legend(title.position = "left", order = 3, nrow = 2)
+    ) +
+    facet_grid(type ~ header, scales = "free_x") +
+    coord_flip() +
+    theme_bw() +
+    theme(
+        axis.text = element_text(size = 12),
+        axis.title = element_text(size = 14),
+        strip.text = element_text(size = 14),
+        legend.text = element_text(size = 10),
+        legend.position = "bottom",
+        legend.direction = "horizontal"
+    ) +
+    # legend.title = element_blank()) +
+    labs(y = "", x = "threshold (in sec)") +
+    geom_hline(yintercept = 0, linetype = "dashed")
+
+ggsave(paste0("figures/", platform, "_regression_conditional_no_control.pdf"), width = 12, height = 7)
