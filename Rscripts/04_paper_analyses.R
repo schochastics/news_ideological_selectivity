@@ -2682,3 +2682,86 @@ ggplot(dat, aes(y = Estimate, x = factor(threshold))) +
     geom_hline(yintercept = 0, linetype = "dashed")
 
 ggsave(paste0("figures/", platform, "_regression_conditional_no_control.pdf"), width = 12, height = 7)
+
+## average alignment top 15 outlets
+cutoffs <- c(3, 10, 30, 60, 120)
+non_pol <- lapply(cutoffs, function(y) {
+    lapply(fl, function(x) {
+        dt <- data.table::fread(paste0("processed_data/", platform, "/news_only/", x))
+        if (fixN) {
+            peeps <- dt[duration >= 120]
+            peeps <- unique(peeps[["panelist_id"]])
+            dt <- dt[panelist_id %in% peeps]
+        }
+        dt[survey, on = .(panelist_id), leftright := leftright]
+        dt <- dt[!is.na(leftright)]
+        dt[, `:=`(leftright = fcase(leftright < 6, -1, leftright > 6, 1, default = 0))]
+        mean_ideo <- mean(unique(dt[, .(panelist_id, leftright)])[["leftright"]])
+
+        dt <- dt[political == "" & duration >= y]
+
+        # calculate the ideological slant of the individual participants news diets
+        dom_align <- dt[, .(align = mean(leftright, na.rm = TRUE) - mean_ideo,visits_tot = sum(visits)), by = .(domain)]
+        dom_align[,country:=x]
+        dom_align
+    })
+})
+
+pol <- lapply(cutoffs, function(y) {
+    lapply(fl, function(x) {
+        dt <- data.table::fread(paste0("processed_data/", platform, "/news_only/", x))
+        if (fixN) {
+            peeps <- dt[duration >= 120]
+            peeps <- unique(peeps[["panelist_id"]])
+            dt <- dt[panelist_id %in% peeps]
+        }
+        dt[survey, on = .(panelist_id), leftright := leftright]
+        dt <- dt[!is.na(leftright)]
+        dt[, `:=`(leftright = fcase(leftright < 6, -1, leftright > 6, 1, default = 0))]
+        mean_ideo <- mean(unique(dt[, .(panelist_id, leftright)])[["leftright"]])
+
+        dt <- dt[political == "political" & duration >= y]
+
+        # calculate the ideological slant of the individual participants news diets
+        dom_align <- dt[, .(align = mean(leftright, na.rm = TRUE) - mean_ideo,visits_tot = sum(visits)), by = .(domain)]
+        dom_align[,country:=x]
+        dom_align
+    })
+})
+
+res <- rbind(
+    rbind(rbindlist(non_pol[[1]]),rbindlist(non_pol[[2]]),rbindlist(non_pol[[3]]),rbindlist(non_pol[[4]]),rbindlist(non_pol[[5]])),
+    rbind(rbindlist(pol[[1]]),rbindlist(pol[[2]]),rbindlist(pol[[3]]),rbindlist(pol[[4]]),rbindlist(pol[[5]]))
+)
+
+res[,country:=long_cases[match(str_remove(country,"\\.csv"),short_cases)]]
+res <- res[,.(align = mean(align,na.rm=TRUE),visits=max(visits_tot)),by=.(domain,country)]
+res[,order:=rank(-visits),by=country]
+res <- res[order<=15]
+saveRDS(res,paste0("processed_data/stats/", platform, "top_outlet_align.RDS"))
+
+## plot
+dat <- readRDS(paste0("processed_data/stats/", platform, "top_outlet_align.RDS"))
+
+ggplot(dat,aes(x=align,size=visits,label=domain))+
+    geom_point(y=0)+
+    geom_text(y=0,angle=45,hjust = 1.1, vjust = 1, nudge_x = 0, alpha = .5)+
+    scale_x_continuous(limits=c(-1., 1)) +
+    scale_y_continuous(limits=c(-1.75, 0.25)) +
+    scale_size(range = c(3,10)) +
+    coord_cartesian(clip="off")+
+    facet_wrap(~country, nrow = 6, scales = "free_y")+
+    theme_bw()+
+    theme(#axis.title = element_blank(),
+        axis.text = element_text(size = 9),
+        legend.position = "none",
+        strip.text = element_text(size = 14,face="bold"),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank()) +
+  xlab("Ideological alignment") +
+  ylab("")
+
+ggsave(paste0("figures/", platform, "_domain_top15_align.pdf"), width = 10, height = 16)
