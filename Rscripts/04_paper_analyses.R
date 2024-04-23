@@ -2685,6 +2685,8 @@ ggsave(paste0("figures/", platform, "_regression_conditional_no_control.pdf"), w
 
 ## average alignment top 15 outlets
 cutoffs <- c(3, 10, 30, 60, 120)
+fixN <- TRUE
+platform <- "both"
 non_pol <- lapply(cutoffs, function(y) {
     lapply(fl, function(x) {
         dt <- data.table::fread(paste0("processed_data/", platform, "/news_only/", x))
@@ -2701,7 +2703,7 @@ non_pol <- lapply(cutoffs, function(y) {
         dt <- dt[political == "" & duration >= y]
 
         # calculate the ideological slant of the individual participants news diets
-        dom_align <- dt[, .(align = mean(leftright, na.rm = TRUE) - mean_ideo,visits_tot = sum(visits)), by = .(domain)]
+        dom_align <- dt[, .(align = mean(leftright, na.rm = TRUE) - mean_ideo,visits_tot = length(unique(panelist_id))), by = .(domain)]
         dom_align[,country:=x]
         dom_align
     })
@@ -2723,7 +2725,7 @@ pol <- lapply(cutoffs, function(y) {
         dt <- dt[political == "political" & duration >= y]
 
         # calculate the ideological slant of the individual participants news diets
-        dom_align <- dt[, .(align = mean(leftright, na.rm = TRUE) - mean_ideo,visits_tot = sum(visits)), by = .(domain)]
+        dom_align <- dt[, .(align = mean(leftright, na.rm = TRUE) - mean_ideo,visits_tot = length(unique(panelist_id))), by = .(domain)]
         dom_align[,country:=x]
         dom_align
     })
@@ -2735,20 +2737,20 @@ res <- rbind(
 )
 
 res[,country:=long_cases[match(str_remove(country,"\\.csv"),short_cases)]]
-res <- res[,.(align = mean(align,na.rm=TRUE),visits=max(visits_tot)),by=.(domain,country)]
+res <- res[,.(align = mean(align,na.rm=TRUE),visits=max(visits_tot)),by=.(country,domain)]
 res[,order:=rank(-visits),by=country]
 res <- res[order<=15]
 saveRDS(res,paste0("processed_data/stats/", platform, "top_outlet_align.RDS"))
 
 ## plot
 dat <- readRDS(paste0("processed_data/stats/", platform, "top_outlet_align.RDS"))
-
-ggplot(dat,aes(x=align,size=visits,label=domain))+
+dat[,visits_norm:=visits/max(visits),by=.(country)]
+ggplot(dat,aes(x=align,size=visits_norm,label=domain))+
     geom_point(y=0)+
     geom_text(y=0,angle=45,hjust = 1.1, vjust = 1, nudge_x = 0, alpha = .5)+
     scale_x_continuous(limits=c(-1., 1)) +
     scale_y_continuous(limits=c(-1.75, 0.25)) +
-    scale_size(range = c(3,10)) +
+    scale_size(range = c(1,8)) +
     coord_cartesian(clip="off")+
     facet_wrap(~country, nrow = 6, scales = "free_y")+
     theme_bw()+
