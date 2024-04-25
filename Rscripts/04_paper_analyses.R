@@ -2748,7 +2748,7 @@ res <- rbind(
 )
 
 res[, country := long_cases[match(str_remove(country, "\\.csv"), short_cases)]]
-res <- res[, .(align = mean(align, na.rm = TRUE), visits = max(visits_tot)), by = .(country, domain)]
+res <- res[, .(align = mean(align, na.rm = TRUE), visits = max(visits_tot, na.rm=TRUE)), by = .(country, domain)]
 res[, order := rank(-visits), by = country]
 res <- res[order <= 15]
 saveRDS(res, paste0("processed_data/stats/", platform, "top_outlet_align.RDS"))
@@ -2842,7 +2842,7 @@ res <- rbind(
 )
 
 res[, country := long_cases[match(str_remove(country, "\\.csv"), short_cases)]]
-res <- res[, .(align = mean(align, na.rm = TRUE), visits = max(visits_tot)), by = .(country, domain)]
+res <- res[, .(align = mean(align, na.rm = TRUE), visits = mean(visits_tot,na.rm=TRUE)), by = .(country, domain)]
 res[, order := rank(-visits), by = country]
 res <- res[order <= 15]
 saveRDS(res, paste0("processed_data/stats/", platform, "top_outlet_align_no-top10.RDS"))
