@@ -516,7 +516,7 @@ result_files <- paste0(platform, c(
     "_news_diet_slant.RDS",
     "_news_diet_slant_01sqrt2.RDS"
 ))
-types <- c("(A) News Diet Slant (SD)", "(B) Expected Squared Distance")
+types <- c("News Diet Slant (SD)", "Expected Squared Distance")
 
 res_tbl <- map_dfr(seq_along(result_files), function(x) {
     readRDS(paste0("processed_data/stats/", result_files[x])) |>
@@ -524,6 +524,7 @@ res_tbl <- map_dfr(seq_along(result_files), function(x) {
         pivot_longer(cols = c(non_political, political), names_to = "news_type", values_to = "score")
 })
 
+res_tbl <- res_tbl |> mutate(type = factor(type,levels = types))
 
 ggplot(res_tbl, aes(x = as.factor(cutoff), y = score, color = news_type, shape = news_type)) +
     geom_point(size = 3) +
@@ -2323,6 +2324,7 @@ ggplot() +
     geom_density(data = dat[leftright != 0 & cutoff == 120], aes(x = diet_slant, fill = as.factor(leftright), linetype = as.factor(leftright)), alpha = 0.7, color = "grey25") +
     geom_vline(data = outlets, aes(xintercept = x, color = as.factor(leftright)), linetype = "dashed", linewidth = 1.5) +
     geom_label(data = outlets, aes(x = x, y = y, label = domain), vjust = 0, size = 4) +
+    scale_x_continuous(limits=c(-1,1))+
     scale_fill_manual(values = cols, name = "", labels = c("Liberal", "Conservative")) +
     scale_colour_manual(values = cols, name = "", labels = c("Liberal", "Conservative")) +
     scale_linetype_manual(values = c("solid", "dashed"), name = "", labels = c("Liberal", "Conservative")) +
@@ -2342,10 +2344,13 @@ ggplot() +
 ggsave(paste0("figures/", platform, "_density_plot_main.pdf"), height = 16, width = 10)
 
 ggplot() +
-    geom_density(data = dat[leftright != 0 & cutoff == 3], aes(x = diet_slant, color = as.factor(leftright), fill = as.factor(leftright)), alpha = 0.7) +
+    geom_density(data = dat[leftright != 0 & cutoff == 3], aes(x = diet_slant, linetype = as.factor(leftright), fill = as.factor(leftright)), color = "grey25",alpha = 0.7) +
+    geom_vline(data = outlets, aes(xintercept = x, color = as.factor(leftright)), linetype = "dashed", linewidth = 1.5) +
     geom_label(data = outlets, aes(x = x, y = y, label = domain), vjust = 0, size = 3) +
-    scale_fill_manual(values = c("red", "blue"), name = "", labels = c("Conservative", "Liberal")) +
-    scale_colour_manual(values = c("red", "blue"), name = "", labels = c("Conservative", "Liberal")) +
+    scale_x_continuous(limits=c(-1,1))+
+    scale_linetype_manual(values = c("solid", "dashed"), name = "", labels = c("Liberal", "Conservative")) +
+    scale_fill_manual(values = cols, name = "", labels = c("Liberal", "Conservative")) +
+    scale_colour_manual(values = cols, name = "", labels = c("Liberal", "Conservative")) +
     facet_grid(country ~ political, scale = "free_y") +
     theme_bw() +
     theme(
@@ -2372,7 +2377,7 @@ bakshy[, domain := fifelse(domain == "westernjournalism.com", "westernjournal.co
 bakshy <- bakshy[!domain %in% c("msn.com", "twitter.com", "amazon.com", "youtube.com")]
 bakshy <- bakshy[, c("domain", "avg_align")]
 robertson_data <- fread("data/bias_scores.csv")
-us <- data.table::fread(paste0("processed_data/", platform, "/news_only/", "us.csv"))
+us <- fread(paste0("processed_data/", platform, "/news_only/", "us.csv"))
 us[survey, on = .(panelist_id), leftright := leftright]
 us[, `:=`(leftright = fcase(leftright < 6, -1, leftright > 6, 1, default = 0))]
 us <- us[duration >= 120 & !is.na(leftright)]
@@ -2388,7 +2393,7 @@ dat <- us[, .(
     budak = mean(budak_score, na.rm = FALSE) * 5,
     allside_com = mean(allsides_score_community, na.rm = FALSE),
     allside = mean(allsides_score, na.rm = FALSE),
-    pew = mean(pew_score, na.rm = FALSE),
+    pew = mean(pew_score, na.rm = FALSE) * 2,
     mturk = mean(mturk_score, na.rm = FALSE)
 ),
 by = .(panelist_id, political)
@@ -2421,17 +2426,21 @@ outlets <- data.table(
         "PEW scores", "Mturk scores"
     ), each = 2),
     domain = rep(c("CNN", "Fox News"), 8),
-    value = c(-0.26, 0.81, -0.27, 0.78, -0.11, 0.61, -0.03 * 5, 0.13 * 5, -0.5, 1.0, -0, 0.5, -0.22, 0.42, -0.66, 0.25),
-    y = 0
+    value = c(-0.26, 0.81, -0.27, 0.78, -0.11, 0.61, -0.03 * 5, 0.13 * 5, -0.5, 1.0, -0, 0.5, -0.22*2, 0.42*2, -0.66, 0.25),
+    y = 0,
+    leftright = rep(c(-1, 1), 8)
 )
 
 outlets$variable <- factor(outlets$variable, levels = levs)
 
 ggplot() +
-    geom_density(data = dat_melt[leftright != 0], aes(x = value, color = as.factor(leftright), fill = as.factor(leftright)), alpha = 0.7) +
+    geom_density(data = dat_melt[leftright!=0], aes(x = value, fill = as.factor(leftright),linetype = as.factor(leftright)), alpha = 0.7,color = "grey25") +
+    geom_vline(data = outlets, aes(xintercept = value, color = as.factor(leftright)), linetype = "dashed", linewidth = 1.5) +
     geom_label(data = outlets, aes(x = value, y = y, label = domain), vjust = 0, size = 3) +
-    scale_fill_manual(values = c("red", "blue"), name = "", labels = c("Conservative", "Liberal")) +
-    scale_colour_manual(values = c("red", "blue"), name = "", labels = c("Conservative", "Liberal")) +
+    scale_x_continuous(limits=c(-1,1))+
+    scale_linetype_manual(values = c("solid", "dashed"), name = "", labels = c("Liberal", "Conservative")) +
+    scale_fill_manual(values = cols, name = "", labels = c("Liberal", "Conservative")) +
+    scale_colour_manual(values = cols, name = "", labels = c("Liberal", "Conservative")) +
     facet_grid(variable ~ political, scale = "free_y") +
     theme_bw() +
     theme(
@@ -2792,16 +2801,16 @@ non_pol <- lapply(cutoffs, function(y) {
             peeps <- unique(peeps[["panelist_id"]])
             dt <- dt[panelist_id %in% peeps]
         }
-        top10 <- dt[, .(count = sum(visits)), by = panelist_id]
+        top10 <- dt[, .(count = .N), by = panelist_id]
         top10[, order := rank(-count)]
-        top10 <- top10[order <= 15][["panelist_id"]]
+        top10 <- top10[order <= 10][["panelist_id"]]
         dt <- dt[!panelist_id %in% top10]
         dt[survey, on = .(panelist_id), leftright := leftright]
         dt <- dt[!is.na(leftright)]
         dt[, `:=`(leftright = fcase(leftright < 6, -1, leftright > 6, 1, default = 0))]
-        mean_ideo <- mean(unique(dt[, .(panelist_id, leftright)])[["leftright"]])
+        mean_ideo <- mean((dt[, .(panelist_id, leftright)])[["leftright"]])
 
-        dt <- dt[political == "" & duration >= y]
+        dt <- dt[political != "political" & duration > y]
 
         # calculate the ideological slant of the individual participants news diets
         dom_align <- dt[, .(align = mean(leftright, na.rm = TRUE) - mean_ideo, visits_tot = length(unique(panelist_id))), by = .(domain)]
@@ -2818,16 +2827,16 @@ pol <- lapply(cutoffs, function(y) {
             peeps <- unique(peeps[["panelist_id"]])
             dt <- dt[panelist_id %in% peeps]
         }
-        top10 <- dt[, .(count = sum(visits)), by = panelist_id]
+        top10 <- dt[, .(count = .N), by = panelist_id]
         top10[, order := rank(-count)]
-        top10 <- top10[order <= 15][["panelist_id"]]
+        top10 <- top10[order <= 10][["panelist_id"]]
         dt <- dt[!panelist_id %in% top10]
         dt[survey, on = .(panelist_id), leftright := leftright]
         dt <- dt[!is.na(leftright)]
         dt[, `:=`(leftright = fcase(leftright < 6, -1, leftright > 6, 1, default = 0))]
-        mean_ideo <- mean(unique(dt[, .(panelist_id, leftright)])[["leftright"]])
+        mean_ideo <- mean((dt[, .(panelist_id, leftright)])[["leftright"]])
 
-        dt <- dt[political == "political" & duration >= y]
+        dt <- dt[political == "political" & duration > y]
 
         # calculate the ideological slant of the individual participants news diets
         dom_align <- dt[, .(align = mean(leftright, na.rm = TRUE) - mean_ideo, visits_tot = length(unique(panelist_id))), by = .(domain)]
@@ -2852,12 +2861,13 @@ dat <- readRDS(paste0("processed_data/stats/", platform, "top_outlet_align_no-to
 dat[, visits_norm := visits / max(visits), by = .(country)]
 ggplot(dat, aes(x = align, size = visits_norm, label = domain)) +
     geom_point(y = 0) +
-    geom_text(y = 0, angle = 45, hjust = 1.1, vjust = 1, nudge_x = 0, alpha = .5) +
+    geom_text(aes(alpha=visits_norm),y = 0, angle = 45, hjust = 1.1, vjust = 1, nudge_x = 0) +
     scale_x_continuous(limits = c(-1., 1)) +
     scale_y_continuous(limits = c(-1.75, 0.25)) +
-    scale_size(range = c(1, 8)) +
+    scale_alpha(range=c(0.25,0.75)) +
+    scale_size(range = c(1, 7)) +
     coord_cartesian(clip = "off") +
-    facet_wrap(~country, nrow = 6, scales = "free_y") +
+    facet_wrap(~country, nrow = 2, scales = "free") +
     theme_bw() +
     theme( # axis.title = element_blank(),
         axis.text = element_text(size = 9),
@@ -2872,4 +2882,4 @@ ggplot(dat, aes(x = align, size = visits_norm, label = domain)) +
     xlab("Ideological alignment") +
     ylab("")
 
-ggsave(paste0("figures/", platform, "_domain_top15_align_no-top10.pdf"), width = 10, height = 16)
+ggsave(paste0("figures/", platform, "_domain_top15_align_no-top10_free.pdf"), width = 18, height = 6)
