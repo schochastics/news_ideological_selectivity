@@ -2021,8 +2021,9 @@ summary_scores <- bind_rows(sum_stat_diverse, sum_stat_partisan) |>
 
 summary_scores$meta2 <- ifelse(
     grepl("News Diet Div", summary_scores$meta2),
-    "(A) Simpson's D", "(B) News Diet Slant (SD)"
+    "Simpson's D", "News Diet Slant (SD)"
 )
+summary_scores$meta2 <- factor(summary_scores$meta2,levels=c("Simpson's D", "News Diet Slant (SD)"))
 
 ggplot(summary_scores, aes(y = score, x = factor(cutoff))) +
     geom_point(
