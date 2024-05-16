@@ -2321,7 +2321,7 @@ outlets <- data.table(
 
 cols <- c("#E69F00", "#56B4E9")
 ggplot() +
-    geom_density(data = dat[leftright != 0 & cutoff == 120], aes(x = diet_slant, fill = as.factor(leftright), linetype = as.factor(leftright)), alpha = 0.7, color = "grey25") +
+    geom_density(data = dat[leftright != 0 & cutoff == 120], aes(x = diet_slant, fill = as.factor(leftright), linetype = as.factor(leftright)), alpha = 0.7, color = "grey25",bw=0.115) +
     geom_vline(data = outlets, aes(xintercept = x, color = as.factor(leftright)), linetype = "dashed", linewidth = 1.5) +
     geom_label(data = outlets, aes(x = x, y = y, label = domain), vjust = 0, size = 4) +
     scale_x_continuous(limits=c(-1,1))+
@@ -2398,32 +2398,29 @@ dat <- us[, .(
 ),
 by = .(panelist_id, political)
 ]
-
-dat <- dat[current, on = .(panelist_id)]
-dat[, i.political := NULL]
-dat_melt <- melt(dat, id.vars = c("panelist_id", "political", "leftright"))
-dat_melt[, political := fifelse(political == "", "Non-political news", "Political news")]
+dat[,political := fifelse(political == "", "Non-political news", "Political news")]
+dat1 <- dat[current, on = .(panelist_id,political)]
+dat_melt <- melt(dat1, id.vars = c("panelist_id", "political", "leftright"))
 dat_melt <- dat_melt[!is.na(value)]
 
 dat_melt[, variable := fcase(
-    variable == "diet_slant", "present data",
-    variable == "robertson", "Robertson et al. [80] scores",
-    variable == "bakshy", "Bakshy et al. [54] scores",
-    variable == "budak", "Budak et al. [43] scores",
-    variable == "allside_com", "Allside community scores",
-    variable == "allside", "Allside controlled scores",
-    variable == "robertson", "Robertson et al. [80] scores",
-    variable == "pew", "PEW scores",
-    variable == "mturk", "Mturk scores"
+    variable == "diet_slant", "(A) Present data",
+    variable == "robertson", "(C) Robertson et al. [80] scores",
+    variable == "bakshy", "(B) Bakshy et al. [54] scores",
+    variable == "budak", "(D) Budak et al. [43] scores",
+    variable == "allside_com", "(E) AllSides community scores",
+    variable == "allside", "(F) AllSides controlled scores",
+    variable == "pew", "(G) PEW scores",
+    variable == "mturk", "(H) Mturk scores"
 )]
 levs <- unique(dat_melt$variable)[c(8, 2, 1, 3, 4, 5, 6, 7)]
 dat_melt[, variable := factor(variable, levels = levs)]
 
 outlets <- data.table(
     variable = rep(c(
-        "present data", "Bakshy et al. [54] scores", "Robertson et al. [80] scores",
-        "Budak et al. [43] scores", "Allside community scores", "Allside controlled scores",
-        "PEW scores", "Mturk scores"
+    "(A) Present data", "(B) Bakshy et al. [54] scores", "(C) Robertson et al. [80] scores",
+    "(D) Budak et al. [43] scores", "(E) AllSides community scores", "(F) AllSides controlled scores",
+    "(G) PEW scores", "(H) Mturk scores"
     ), each = 2),
     domain = rep(c("CNN", "Fox News"), 8),
     value = c(-0.26, 0.81, -0.27, 0.78, -0.11, 0.61, -0.03 * 5, 0.13 * 5, -0.5, 1.0, -0, 0.5, -0.22*2, 0.42*2, -0.66, 0.25),
@@ -2434,7 +2431,7 @@ outlets <- data.table(
 outlets$variable <- factor(outlets$variable, levels = levs)
 
 ggplot() +
-    geom_density(data = dat_melt[leftright!=0], aes(x = value, fill = as.factor(leftright),linetype = as.factor(leftright)), alpha = 0.7,color = "grey25") +
+    geom_density(data = dat_melt[leftright!=0], aes(x = value, fill = as.factor(leftright),linetype = as.factor(leftright)), alpha = 0.7,color = "grey25",bw=0.115) +
     geom_vline(data = outlets, aes(xintercept = value, color = as.factor(leftright)), linetype = "dashed", linewidth = 1.5) +
     geom_label(data = outlets, aes(x = value, y = y, label = domain), vjust = 0, size = 3) +
     scale_x_continuous(limits=c(-1,1))+
@@ -2808,7 +2805,7 @@ non_pol <- lapply(cutoffs, function(y) {
         dt[survey, on = .(panelist_id), leftright := leftright]
         dt <- dt[!is.na(leftright)]
         dt[, `:=`(leftright = fcase(leftright < 6, -1, leftright > 6, 1, default = 0))]
-        mean_ideo <- mean((dt[, .(panelist_id, leftright)])[["leftright"]])
+        mean_ideo <- mean(unique(dt[, .(panelist_id, leftright)])[["leftright"]])
 
         dt <- dt[political != "political" & duration > y]
 
@@ -2834,7 +2831,7 @@ pol <- lapply(cutoffs, function(y) {
         dt[survey, on = .(panelist_id), leftright := leftright]
         dt <- dt[!is.na(leftright)]
         dt[, `:=`(leftright = fcase(leftright < 6, -1, leftright > 6, 1, default = 0))]
-        mean_ideo <- mean((dt[, .(panelist_id, leftright)])[["leftright"]])
+        mean_ideo <- mean(unique(dt[, .(panelist_id, leftright)])[["leftright"]])
 
         dt <- dt[political == "political" & duration > y]
 
