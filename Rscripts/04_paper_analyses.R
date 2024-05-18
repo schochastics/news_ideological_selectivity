@@ -852,7 +852,7 @@ tidy_toplot_integrated <- tidy_toplot_integrated |>
     mutate(
         type = as.factor(type),
         type = dplyr::recode_factor(type,
-            "non_political" = "Non-Political News",
+            "non_political" = "Non-political News",
             "political" = "Political News"
         )
     )
@@ -1215,7 +1215,7 @@ tidy_toplot_integrated <- tidy_toplot_integrated %>%
     mutate(
         type = as.factor(type),
         type = dplyr::recode_factor(type,
-            "non_political" = "Non-Political News",
+            "non_political" = "Non-political News",
             "political" = "Political News"
         )
     )
@@ -1225,6 +1225,8 @@ write_csv(tidy_toplot_integrated, paste0("processed_data/regression/", platform,
 ## Plotting ----
 ### reduced ----
 tidy_toplot_integrated <- read_csv(paste0("processed_data/regression/", platform, "_conditional_effects.csv"))
+tidy_toplot_integrated$type <- str_replace(tidy_toplot_integrated$type,"Non-Po","Non-po")
+
 dat <- tidy_toplot_integrated |>
     mutate(level = str_replace_all(level, "\\(B\\) Access", "\\(C\\) News Access")) |>
     mutate(level = str_replace_all(level, "\\(C\\) Political Interest", "\\(B\\) Political Interest")) |>
@@ -2313,7 +2315,7 @@ saveRDS(res, paste0("processed_data/stats/", platform, "density_plots.RDS"))
 dat <- readRDS(paste0("processed_data/stats/", platform, "density_plots.RDS"))
 
 outlets <- data.table(
-    domain = c("Spiegel", "Focus", "El Peridodico", "El Mundo", "Le Monde", "Le Figaro", "Repubblica", "Mediaset", "Gurdian", "Daily Mail", "CNN", "Fox News"),
+    domain = c("Spiegel", "Focus", "El Periodico", "El Mundo", "Le Monde", "Le Figaro", "Repubblica", "Mediaset", "Guardian", "Daily Mail", "CNN", "Fox News"),
     country = rep(long_cases, each = 2),
     x = c(-0.41, 0.39, -0.27, 0.3, -0.4, 0.2, -0.38, 0.31, -0.43, 0.43, -0.26, 0.81),
     y = 0,
@@ -2323,7 +2325,7 @@ outlets <- data.table(
 cols <- c("#E69F00", "#56B4E9")
 ggplot() +
     geom_density(data = dat[leftright != 0 & cutoff == 120], aes(x = diet_slant, fill = as.factor(leftright), linetype = as.factor(leftright)), alpha = 0.7, color = "grey25",bw=0.115) +
-    geom_vline(data = outlets, aes(xintercept = x, color = as.factor(leftright)), linetype = "dashed", linewidth = 1.5) +
+    # geom_vline(data = outlets, aes(xintercept = x, color = as.factor(leftright)), linetype = "dashed", linewidth = 1.5) +
     geom_label(data = outlets, aes(x = x, y = y, label = domain), vjust = 0, size = 4) +
     scale_x_continuous(limits=c(-1,1))+
     scale_fill_manual(values = cols, name = "", labels = c("Liberal", "Conservative")) +
@@ -2346,7 +2348,7 @@ ggsave(paste0("figures/", platform, "_density_plot_main.pdf"), height = 16, widt
 
 ggplot() +
     geom_density(data = dat[leftright != 0 & cutoff == 3], aes(x = diet_slant, linetype = as.factor(leftright), fill = as.factor(leftright)), color = "grey25",alpha = 0.7) +
-    geom_vline(data = outlets, aes(xintercept = x, color = as.factor(leftright)), linetype = "dashed", linewidth = 1.5) +
+    # geom_vline(data = outlets, aes(xintercept = x, color = as.factor(leftright)), linetype = "dashed", linewidth = 1.5) +
     geom_label(data = outlets, aes(x = x, y = y, label = domain), vjust = 0, size = 3) +
     scale_x_continuous(limits=c(-1,1))+
     scale_linetype_manual(values = c("solid", "dashed"), name = "", labels = c("Liberal", "Conservative")) +
@@ -2433,7 +2435,7 @@ outlets$variable <- factor(outlets$variable, levels = levs)
 
 ggplot() +
     geom_density(data = dat_melt[leftright!=0], aes(x = value, fill = as.factor(leftright),linetype = as.factor(leftright)), alpha = 0.7,color = "grey25",bw=0.115) +
-    geom_vline(data = outlets, aes(xintercept = value, color = as.factor(leftright)), linetype = "dashed", linewidth = 1.5) +
+    # geom_vline(data = outlets, aes(xintercept = value, color = as.factor(leftright)), linetype = "dashed", linewidth = 1.5) +
     geom_label(data = outlets, aes(x = value, y = y, label = domain), vjust = 0, size = 3) +
     scale_x_continuous(limits=c(-1,1))+
     scale_linetype_manual(values = c("solid", "dashed"), name = "", labels = c("Liberal", "Conservative")) +
