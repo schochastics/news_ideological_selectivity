@@ -2327,10 +2327,10 @@ ggplot() +
     geom_density(data = dat[leftright != 0 & cutoff == 120], aes(x = diet_slant, fill = as.factor(leftright), linetype = as.factor(leftright)), alpha = 0.7, color = "grey25",bw=0.115) +
     # geom_vline(data = outlets, aes(xintercept = x, color = as.factor(leftright)), linetype = "dashed", linewidth = 1.5) +
     geom_label(data = outlets, aes(x = x, y = y, label = domain), vjust = 0, size = 4) +
-    scale_x_continuous(limits=c(-1,1))+
-    scale_fill_manual(values = cols, name = "", labels = c("Liberal", "Conservative")) +
-    scale_colour_manual(values = cols, name = "", labels = c("Liberal", "Conservative")) +
-    scale_linetype_manual(values = c("solid", "dashed"), name = "", labels = c("Liberal", "Conservative")) +
+    scale_x_continuous(limits=c(-1,1), name = "News diet slant")+
+    scale_fill_manual(values = cols, labels = c("Liberal", "Conservative"), name = "User ideology") +
+    scale_colour_manual(values = cols, labels = c("Liberal", "Conservative"), name = "User ideology") +
+    scale_linetype_manual(values = c("solid", "dashed"), labels = c("Liberal", "Conservative"), name = "User ideology") +
     facet_grid(country ~ political, scale = "free_y") +
     theme_bw() +
     theme(
@@ -2350,10 +2350,10 @@ ggplot() +
     geom_density(data = dat[leftright != 0 & cutoff == 3], aes(x = diet_slant, linetype = as.factor(leftright), fill = as.factor(leftright)), color = "grey25",alpha = 0.7) +
     # geom_vline(data = outlets, aes(xintercept = x, color = as.factor(leftright)), linetype = "dashed", linewidth = 1.5) +
     geom_label(data = outlets, aes(x = x, y = y, label = domain), vjust = 0, size = 3) +
-    scale_x_continuous(limits=c(-1,1))+
-    scale_linetype_manual(values = c("solid", "dashed"), name = "", labels = c("Liberal", "Conservative")) +
-    scale_fill_manual(values = cols, name = "", labels = c("Liberal", "Conservative")) +
-    scale_colour_manual(values = cols, name = "", labels = c("Liberal", "Conservative")) +
+    scale_x_continuous(limits=c(-1,1), name = "News diet slant")+
+    scale_fill_manual(values = cols, labels = c("Liberal", "Conservative"), name = "User ideology") +
+    scale_colour_manual(values = cols, labels = c("Liberal", "Conservative"), name = "User ideology") +
+    scale_linetype_manual(values = c("solid", "dashed"), labels = c("Liberal", "Conservative"), name = "User ideology") +
     facet_grid(country ~ political, scale = "free_y") +
     theme_bw() +
     theme(
@@ -2437,11 +2437,10 @@ ggplot() +
     geom_density(data = dat_melt[leftright!=0], aes(x = value, fill = as.factor(leftright),linetype = as.factor(leftright)), alpha = 0.7,color = "grey25",bw=0.115) +
     # geom_vline(data = outlets, aes(xintercept = value, color = as.factor(leftright)), linetype = "dashed", linewidth = 1.5) +
     geom_label(data = outlets, aes(x = value, y = y, label = domain), vjust = 0, size = 3) +
-    scale_x_continuous(limits=c(-1,1))+
-    scale_linetype_manual(values = c("solid", "dashed"), name = "", labels = c("Liberal", "Conservative")) +
-    scale_fill_manual(values = cols, name = "", labels = c("Liberal", "Conservative")) +
-    scale_colour_manual(values = cols, name = "", labels = c("Liberal", "Conservative")) +
-    facet_grid(variable ~ political, scale = "free_y") +
+    scale_x_continuous(limits=c(-1,1), name = "News diet slant")+
+    scale_fill_manual(values = cols, labels = c("Liberal", "Conservative"), name = "User ideology") +
+    scale_colour_manual(values = cols, labels = c("Liberal", "Conservative"), name = "User ideology") +
+    scale_linetype_manual(values = c("solid", "dashed"), labels = c("Liberal", "Conservative"), name = "User ideology") +    facet_grid(variable ~ political, scale = "free_y") +
     theme_bw() +
     theme(
         legend.position = "bottom",
