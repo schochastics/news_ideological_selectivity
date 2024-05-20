@@ -1,7 +1,9 @@
+## Replication material
 
-# Analyzing audience networks
+Material to replicate "Ideological self-selection in online news exposure:
+Evidence from Europe and the USA" published in xxxx [eventually add link]
 
-Material to replicate xxxx
+## Data 
 
 A folder named `data` needs to be added with the following structure:
 
@@ -24,6 +26,6 @@ The following scripts are included:
 
 - `helpers.R`: auxiliary functions used in other scripts
 - `00_process_data_raw.R`: processes the raw data
-- `04_paper_analyses.R`: main analysis script
+- `04_paper_analyses.R`: main analysis script to replicate all results
 
 Use `renv::restore()` to install required R package with the correct version
