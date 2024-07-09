@@ -524,7 +524,7 @@ res_tbl <- map_dfr(seq_along(result_files), function(x) {
         pivot_longer(cols = c(non_political, political), names_to = "news_type", values_to = "score")
 })
 
-res_tbl <- res_tbl |> mutate(type = factor(type,levels = types))
+res_tbl <- res_tbl |> mutate(type = factor(type, levels = types))
 
 ggplot(res_tbl, aes(x = as.factor(cutoff), y = score, color = news_type, shape = news_type)) +
     geom_point(size = 3) +
@@ -1225,7 +1225,7 @@ write_csv(tidy_toplot_integrated, paste0("processed_data/regression/", platform,
 ## Plotting ----
 ### reduced ----
 tidy_toplot_integrated <- read_csv(paste0("processed_data/regression/", platform, "_conditional_effects.csv"))
-tidy_toplot_integrated$type <- str_replace(tidy_toplot_integrated$type,"Non-Po","Non-po")
+tidy_toplot_integrated$type <- str_replace(tidy_toplot_integrated$type, "Non-Po", "Non-po")
 
 dat <- tidy_toplot_integrated |>
     mutate(level = str_replace_all(level, "\\(B\\) Access", "\\(C\\) News Access")) |>
@@ -1270,7 +1270,7 @@ ggplot(dat, aes(y = Estimate, x = factor(threshold))) +
     ggnewscale::new_scale_color() +
     geom_pointrange(
         data = dat[str_detect(dat$level, "\\(C\\)"), ], shape = 17,
-        aes(ymin = CI_lower, ymax = CI_upper, color = level1), size = 0.32,
+        aes(ymin = CI_lower, ymax = CI_upper, color = level1), size = 0.5,
         position = position_dodge2(w = 0.4)
     ) +
     scale_color_manual(
@@ -1290,7 +1290,7 @@ ggplot(dat, aes(y = Estimate, x = factor(threshold))) +
         legend.direction = "horizontal"
     ) +
     # legend.title = element_blank()) +
-    labs(y = "", x = "threshold (in sec)") +
+    labs(y = "Estimate", x = "threshold (in sec)") +
     geom_hline(yintercept = 0, linetype = "dashed")
 
 ggsave(paste0("figures/", platform, "_regression_conditional_reduced.pdf"), width = 12, height = 7)
@@ -2025,7 +2025,7 @@ summary_scores$meta2 <- ifelse(
     grepl("News Diet Div", summary_scores$meta2),
     "Simpson's D", "News Diet Slant (SD)"
 )
-summary_scores$meta2 <- factor(summary_scores$meta2,levels=c("Simpson's D", "News Diet Slant (SD)"))
+summary_scores$meta2 <- factor(summary_scores$meta2, levels = c("Simpson's D", "News Diet Slant (SD)"))
 
 ggplot(summary_scores, aes(y = score, x = factor(cutoff))) +
     geom_point(
@@ -2324,10 +2324,10 @@ outlets <- data.table(
 
 cols <- c("#E69F00", "#56B4E9")
 ggplot() +
-    geom_density(data = dat[leftright != 0 & cutoff == 120], aes(x = diet_slant, fill = as.factor(leftright), linetype = as.factor(leftright)), alpha = 0.7, color = "grey25",bw=0.115) +
+    geom_density(data = dat[leftright != 0 & cutoff == 120], aes(x = diet_slant, fill = as.factor(leftright), linetype = as.factor(leftright)), alpha = 0.7, color = "grey25", bw = 0.115) +
     # geom_vline(data = outlets, aes(xintercept = x, color = as.factor(leftright)), linetype = "dashed", linewidth = 1.5) +
     geom_label(data = outlets, aes(x = x, y = y, label = domain), vjust = 0, size = 4) +
-    scale_x_continuous(limits=c(-1,1), name = "News diet slant")+
+    scale_x_continuous(limits = c(-1, 1), name = "News diet slant") +
     scale_fill_manual(values = cols, labels = c("Liberal", "Conservative"), name = "User ideology") +
     scale_colour_manual(values = cols, labels = c("Liberal", "Conservative"), name = "User ideology") +
     scale_linetype_manual(values = c("solid", "dashed"), labels = c("Liberal", "Conservative"), name = "User ideology") +
@@ -2347,10 +2347,10 @@ ggplot() +
 ggsave(paste0("figures/", platform, "_density_plot_main.pdf"), height = 16, width = 10)
 
 ggplot() +
-    geom_density(data = dat[leftright != 0 & cutoff == 3], aes(x = diet_slant, linetype = as.factor(leftright), fill = as.factor(leftright)), color = "grey25",alpha = 0.7) +
+    geom_density(data = dat[leftright != 0 & cutoff == 3], aes(x = diet_slant, linetype = as.factor(leftright), fill = as.factor(leftright)), color = "grey25", alpha = 0.7) +
     # geom_vline(data = outlets, aes(xintercept = x, color = as.factor(leftright)), linetype = "dashed", linewidth = 1.5) +
     geom_label(data = outlets, aes(x = x, y = y, label = domain), vjust = 0, size = 3) +
-    scale_x_continuous(limits=c(-1,1), name = "News diet slant")+
+    scale_x_continuous(limits = c(-1, 1), name = "News diet slant") +
     scale_fill_manual(values = cols, labels = c("Liberal", "Conservative"), name = "User ideology") +
     scale_colour_manual(values = cols, labels = c("Liberal", "Conservative"), name = "User ideology") +
     scale_linetype_manual(values = c("solid", "dashed"), labels = c("Liberal", "Conservative"), name = "User ideology") +
@@ -2401,8 +2401,8 @@ dat <- us[, .(
 ),
 by = .(panelist_id, political)
 ]
-dat[,political := fifelse(political == "", "Non-political news", "Political news")]
-dat1 <- dat[current, on = .(panelist_id,political)]
+dat[, political := fifelse(political == "", "Non-political news", "Political news")]
+dat1 <- dat[current, on = .(panelist_id, political)]
 dat_melt <- melt(dat1, id.vars = c("panelist_id", "political", "leftright"))
 dat_melt <- dat_melt[!is.na(value)]
 
@@ -2421,12 +2421,12 @@ dat_melt[, variable := factor(variable, levels = levs)]
 
 outlets <- data.table(
     variable = rep(c(
-    "(A) Present data", "(B) Bakshy et al. [52] scores", "(C) Robertson et al. [64] scores",
-    "(D) Budak et al. [41] scores", "(E) AllSides community scores", "(F) AllSides controlled scores",
-    "(G) PEW scores", "(H) Mturk scores"
+        "(A) Present data", "(B) Bakshy et al. [52] scores", "(C) Robertson et al. [64] scores",
+        "(D) Budak et al. [41] scores", "(E) AllSides community scores", "(F) AllSides controlled scores",
+        "(G) PEW scores", "(H) Mturk scores"
     ), each = 2),
     domain = rep(c("CNN", "Fox News"), 8),
-    value = c(-0.26, 0.81, -0.27, 0.78, -0.11, 0.61, -0.03 * 5, 0.13 * 5, -0.5, 1.0, -0, 0.5, -0.22*2, 0.42*2, -0.66, 0.25),
+    value = c(-0.26, 0.81, -0.27, 0.78, -0.11, 0.61, -0.03 * 5, 0.13 * 5, -0.5, 1.0, -0, 0.5, -0.22 * 2, 0.42 * 2, -0.66, 0.25),
     y = 0,
     leftright = rep(c(-1, 1), 8)
 )
@@ -2434,13 +2434,14 @@ outlets <- data.table(
 outlets$variable <- factor(outlets$variable, levels = levs)
 
 ggplot() +
-    geom_density(data = dat_melt[leftright!=0], aes(x = value, fill = as.factor(leftright),linetype = as.factor(leftright)), alpha = 0.7,color = "grey25",bw=0.115) +
+    geom_density(data = dat_melt[leftright != 0], aes(x = value, fill = as.factor(leftright), linetype = as.factor(leftright)), alpha = 0.7, color = "grey25", bw = 0.115) +
     # geom_vline(data = outlets, aes(xintercept = value, color = as.factor(leftright)), linetype = "dashed", linewidth = 1.5) +
     geom_label(data = outlets, aes(x = value, y = y, label = domain), vjust = 0, size = 3) +
-    scale_x_continuous(limits=c(-1,1), name = "News diet slant")+
+    scale_x_continuous(limits = c(-1, 1), name = "News diet slant") +
     scale_fill_manual(values = cols, labels = c("Liberal", "Conservative"), name = "User ideology") +
     scale_colour_manual(values = cols, labels = c("Liberal", "Conservative"), name = "User ideology") +
-    scale_linetype_manual(values = c("solid", "dashed"), labels = c("Liberal", "Conservative"), name = "User ideology") +    facet_grid(variable ~ political, scale = "free_y") +
+    scale_linetype_manual(values = c("solid", "dashed"), labels = c("Liberal", "Conservative"), name = "User ideology") +
+    facet_grid(variable ~ political, scale = "free_y") +
     theme_bw() +
     theme(
         legend.position = "bottom",
@@ -2756,7 +2757,7 @@ res <- rbind(
 )
 
 res[, country := long_cases[match(str_remove(country, "\\.csv"), short_cases)]]
-res <- res[, .(align = mean(align, na.rm = TRUE), visits = max(visits_tot, na.rm=TRUE)), by = .(country, domain)]
+res <- res[, .(align = mean(align, na.rm = TRUE), visits = max(visits_tot, na.rm = TRUE)), by = .(country, domain)]
 res[, order := rank(-visits), by = country]
 res <- res[order <= 15]
 saveRDS(res, paste0("processed_data/stats/", platform, "top_outlet_align.RDS"))
@@ -2850,7 +2851,7 @@ res <- rbind(
 )
 
 res[, country := long_cases[match(str_remove(country, "\\.csv"), short_cases)]]
-res <- res[, .(align = mean(align, na.rm = TRUE), visits = mean(visits_tot,na.rm=TRUE)), by = .(country, domain)]
+res <- res[, .(align = mean(align, na.rm = TRUE), visits = mean(visits_tot, na.rm = TRUE)), by = .(country, domain)]
 res[, order := rank(-visits), by = country]
 res <- res[order <= 15]
 saveRDS(res, paste0("processed_data/stats/", platform, "top_outlet_align_no-top10.RDS"))
@@ -2860,10 +2861,10 @@ dat <- readRDS(paste0("processed_data/stats/", platform, "top_outlet_align_no-to
 dat[, visits_norm := visits / max(visits), by = .(country)]
 ggplot(dat, aes(x = align, size = visits_norm, label = domain)) +
     geom_point(y = 0) +
-    geom_text(aes(alpha=visits_norm),y = 0, angle = 45, hjust = 1.1, vjust = 1, nudge_x = 0) +
+    geom_text(aes(alpha = visits_norm), y = 0, angle = 45, hjust = 1.1, vjust = 1, nudge_x = 0) +
     scale_x_continuous(limits = c(-1., 1)) +
     scale_y_continuous(limits = c(-1.75, 0.25)) +
-    scale_alpha(range=c(0.25,0.75)) +
+    scale_alpha(range = c(0.25, 0.75)) +
     scale_size(range = c(1, 7)) +
     coord_cartesian(clip = "off") +
     facet_wrap(~country, nrow = 2, scales = "free") +
