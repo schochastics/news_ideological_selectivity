@@ -103,7 +103,7 @@ p <- ggplot(plt_tbl, aes(x = as.factor(cutoff), y = value, color = name, shape =
         strip.text = element_text(face = "bold"),
         text = element_text(family = "sans", size = 12)
     ) +
-    labs(x = "threshold (in sec)", y = "") +
+    labs(x = "Threshold (in seconds)", y = "") +
     scale_y_continuous(labels = scales::label_percent()) +
     guides(fill = guide_legend(override.aes = list(size = 3)))
 
@@ -474,7 +474,7 @@ result_files <- paste0(platform, c(
     "_simpson_diversity.RDS",
     "_news_diet_slant.RDS"
 ))
-types <- c("(A) Isolation", "(B) Simpson's D", "(C) News Diet Slant (SD)")
+types <- c("(A) Isolation", "(B) Simpson's D", "(C) News diet slant (SD)")
 
 res_tbl <- map_dfr(seq_along(result_files), function(x) {
     readRDS(paste0("processed_data/stats/", result_files[x])) |>
@@ -505,10 +505,10 @@ ggplot(res_tbl, aes(x = as.factor(cutoff), y = score, color = news_type, shape =
         strip.text = element_text(face = "bold"),
         text = element_text(family = "sans", size = 16)
     ) +
-    labs(x = "threshold (in sec)", y = "score") +
+    labs(x = "Threshold (in seconds)", y = "Score") +
     guides(colour = guide_legend(override.aes = list(size = 3)))
 
-ggsave(paste0("figures/", platform, "_figure2.pdf"), width = 16, height = 10)
+ggsave(paste0("figures/", platform, "_figure3.pdf"), width = 16, height = 10)
 
 # revision figure comparing News diet slant ----
 # Figure 2 for Paper----
@@ -548,7 +548,7 @@ ggplot(res_tbl, aes(x = as.factor(cutoff), y = score, color = news_type, shape =
         strip.text = element_text(face = "bold"),
         text = element_text(family = "sans", size = 16)
     ) +
-    labs(x = "threshold (in sec)", y = "score") +
+    labs(x = "Threshold (in seconds)", y = "Score") +
     guides(colour = guide_legend(override.aes = list(size = 3)))
 
 ggsave(paste0("figures/", platform, "_news_diet_slants.pdf"), width = 16, height = 10)
@@ -1226,15 +1226,16 @@ write_csv(tidy_toplot_integrated, paste0("processed_data/regression/", platform,
 ### reduced ----
 tidy_toplot_integrated <- read_csv(paste0("processed_data/regression/", platform, "_conditional_effects.csv"))
 tidy_toplot_integrated$type <- str_replace(tidy_toplot_integrated$type, "Non-Po", "Non-po")
+tidy_toplot_integrated$type <- str_replace(tidy_toplot_integrated$type, "News", "news")
 
 dat <- tidy_toplot_integrated |>
-    mutate(level = str_replace_all(level, "\\(B\\) Access", "\\(C\\) News Access")) |>
-    mutate(level = str_replace_all(level, "\\(C\\) Political Interest", "\\(B\\) Political Interest")) |>
+    mutate(level = str_replace_all(level, "\\(B\\) Access", "\\(C\\) News access")) |>
+    mutate(level = str_replace_all(level, "\\(C\\) Political Interest", "\\(B\\) Political interest")) |>
     mutate(level = str_replace_all(level, "Direct", "Non-referred")) |>
     dplyr::filter(str_detect(level, "\\(A\\)|\\(B\\)|\\(C\\)")) |>
     mutate(level1 = str_remove_all(level, "\\(.*\\).*\\:\\s")) |>
-    mutate(header = str_replace_all(header, "\\(B\\) Access", "\\(C\\) News Access")) |>
-    mutate(header = str_replace_all(header, "\\(C\\) Political Interest", "\\(B\\) Political Interest"))
+    mutate(header = str_replace_all(header, "\\(B\\) Access", "\\(C\\) News access")) |>
+    mutate(header = str_replace_all(header, "\\(C\\) Political Interest", "\\(B\\) Political interest"))
 
 labels <- unique(dat$level1)
 names(labels) <- labels
@@ -1264,7 +1265,7 @@ ggplot(dat, aes(y = Estimate, x = factor(threshold))) +
     ) +
     scale_color_manual(
         values = c("#E69F00", "#009E73"),
-        name = "(B) Political Interest",
+        name = "(B) Political interest",
         guide = guide_legend(title.position = "left", order = 2, nrow = 2)
     ) +
     ggnewscale::new_scale_color() +
@@ -1275,7 +1276,7 @@ ggplot(dat, aes(y = Estimate, x = factor(threshold))) +
     ) +
     scale_color_manual(
         values = c("#E69F00", "#009E73", "#0072B2", "#D55E00", "#CC79A7"),
-        name = "(C) News Access",
+        name = "(C) News access",
         guide = guide_legend(title.position = "left", order = 3, nrow = 2)
     ) +
     facet_grid(type ~ header, scales = "free_x") +
@@ -1290,7 +1291,7 @@ ggplot(dat, aes(y = Estimate, x = factor(threshold))) +
         legend.direction = "horizontal"
     ) +
     # legend.title = element_blank()) +
-    labs(y = "Estimate", x = "threshold (in sec)") +
+    labs(y = "Estimate", x = "Threshold (in seconds)") +
     geom_hline(yintercept = 0, linetype = "dashed")
 
 ggsave(paste0("figures/", platform, "_regression_conditional_reduced.pdf"), width = 12, height = 7)
@@ -2322,7 +2323,9 @@ outlets <- data.table(
     leftright = rep(c(-1, 1), 6)
 )
 
-cols <- c("#E69F00", "#56B4E9")
+# cols <- c("#E69F00", "#56B4E9")
+# cols <- c("#D71920", "#1A4782")
+cols <- c("#7E1F86","#EDE580")
 ggplot() +
     geom_density(data = dat[leftright != 0 & cutoff == 120], aes(x = diet_slant, fill = as.factor(leftright), linetype = as.factor(leftright)), alpha = 0.7, color = "grey25", bw = 0.115) +
     # geom_vline(data = outlets, aes(xintercept = x, color = as.factor(leftright)), linetype = "dashed", linewidth = 1.5) +
