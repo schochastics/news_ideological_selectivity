@@ -58,7 +58,7 @@ vis_cnt_lst <- map(seq_along(fl), function(i) {
     df <- fread(paste0("processed_data/", platform, "/news_only/", fl[i]))
     n <- length(unique(df[duration >= 3][["panelist_id"]]))
     # n1 <- length(unique(df[["panelist_id"]][df[["political"]]=="political"]))
-    # adjust_to_all <- c(0.8662,0.9405,0.9193,0.9064,0.9257,0.8667)[i]
+    adjust_to_all <- c(0.8662,0.9405,0.9193,0.9064,0.9257,0.8667)[i]
     fracs <- sapply(cutoffs, function(x) {
         tmp1 <- length(unique(df[duration >= x & political == "political"][["panelist_id"]])) / n * adjust_to_all
         tmp2 <- length(unique(df[duration >= x][["panelist_id"]])) / n * adjust_to_all
