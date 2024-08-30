@@ -524,18 +524,18 @@ res_tbl <- map_dfr(seq_along(result_files), function(x) {
         pivot_longer(cols = c(non_political, political), names_to = "news_type", values_to = "score")
 })
 
-res_tbl <- res_tbl |> mutate(type = factor(type, levels = types))
+res_tbl <- res_tbl |> mutate(type = factor(type, levels = types)) |> mutate(case=ifelse(case=="USA","US",case))
 
 ggplot(res_tbl, aes(x = as.factor(cutoff), y = score, color = news_type, shape = news_type)) +
     geom_point(size = 3) +
     geom_hline(yintercept = 0, linetype = "dashed", color = "transparent") +
     scale_color_manual(
         values = c("political" = "#AA8939", "non_political" = "#303C74"),
-        labels = c("political" = "Political news", "non_political" = "Non-political news"), name = ""
+        labels = c("political" = "Political news", "non_political" = "Nonpolitical news"), name = ""
     ) +
     scale_shape_manual(
         values = c("political" = 16, "non_political" = 17),
-        labels = c("political" = "Political news", "non_political" = "Non-political news"), name = ""
+        labels = c("political" = "Political news", "non_political" = "Nonpolitical news"), name = ""
     ) +
     facet_grid(type ~ case, scales = "free_y") +
     theme_bw() +
@@ -845,14 +845,17 @@ if (!dir.exists("processed_data/regression")) {
 write_csv(tidy_toplot_integrated, paste0("processed_data/regression/", platform, "_interaction_terms.csv"))
 ## Plotting ----
 tidy_toplot_integrated <- read_csv(paste0("processed_data/regression/", platform, "_interaction_terms.csv"))
+tidy_toplot_integrated$term[tidy_toplot_integrated$term=="(A) Country: USA"] <- "(A) Country: US"
+
 tidy_toplot_integrated <- tidy_toplot_integrated |> mutate(header = as.factor(header))
 level_order <- rev(levels(tidy_toplot_integrated$header))
+
 
 tidy_toplot_integrated <- tidy_toplot_integrated |>
     mutate(
         type = as.factor(type),
         type = dplyr::recode_factor(type,
-            "non_political" = "Non-political News",
+            "non_political" = "Nonpolitical News",
             "political" = "Political News"
         )
     )
@@ -862,7 +865,7 @@ tidy_toplot_integrated |>
     mutate(term = str_replace_all(term, "\\(C\\) Political Interest", "\\(B\\) Political Interest")) |>
     mutate(term = str_replace_all(term, "Direct", "Non-referred")) |>
     mutate(header = str_replace_all(header, "\\(B\\) Access", "\\(C\\) News Access")) |>
-    mutate(header = str_replace_all(header, "Reference: Direct", "Reference: Non-referred")) |>
+    mutate(header = str_replace_all(header, "Reference: Direct", "Reference: Nonreferred")) |>
     mutate(header = str_replace_all(header, "\\(C\\) Political Interest", "\\(B\\) Political Interest")) |>
     ggplot(aes(y = Estimate, x = factor(threshold))) +
     geom_pointrange(
@@ -1301,11 +1304,12 @@ tidy_toplot_integrated <- read_csv(paste0("processed_data/regression/", platform
 dat <- tidy_toplot_integrated |>
     mutate(level = str_replace_all(level, "\\(B\\) Access", "\\(C\\) News Access")) |>
     mutate(level = str_replace_all(level, "\\(C\\) Political Interest", "\\(B\\) Political Interest")) |>
-    mutate(level = str_replace_all(level, "Direct", "Non-referred")) |>
+    mutate(level = str_replace_all(level, "Direct", "Nonreferred")) |>
     mutate(level1 = str_remove_all(level, "\\(.*\\).*\\:\\s")) |>
     mutate(header = str_replace_all(header, "\\(B\\) Access", "\\(C\\) News Access")) |>
     mutate(header = str_replace_all(header, "\\(C\\) Political Interest", "\\(B\\) Political Interest"))
-
+dat$level1[dat$level1=="USA"] <- "US"
+dat$type[dat$type=="Non-Political News"] <- "Nonpolitical News"
 labels <- unique(dat$level1)
 names(labels) <- labels
 ggplot(dat, aes(y = Estimate, x = factor(threshold))) +
@@ -1415,8 +1419,9 @@ bind_rows(
     readRDS(paste0("processed_data/stats/", platform, "_atkinson_scores.RDS")) |>
         mutate(type = "Atkinson scores")
 ) |>
+    mutate(case=ifelse(case=="USA","US",case)) |> 
     pivot_longer(cols = c(non_political, political)) |>
-    mutate(name = ifelse(name == "political", "political news", "non-political news")) |>
+    mutate(name = ifelse(name == "political", "political news", "nonpolitical news")) |>
     ggplot(aes(x = factor(cutoff), y = value, col = name, shape = name)) +
     geom_point(size = 3) +
     geom_hline(yintercept = 0, linetype = "dashed", color = "transparent") +
@@ -1425,11 +1430,11 @@ bind_rows(
             "political news" = "#AA8939",
             "non-political news" = "#303C74"
         ),
-        labels = c("political news" = "Political news", "non-political news" = "Non-political news"), name = ""
+        labels = c("political news" = "Political news", "nonpolitical news" = "Nonpolitical news"), name = ""
     ) +
     scale_shape_manual(
-        values = c("political news" = 16, "non-political news" = 17),
-        labels = c("political news" = "Political news", "non-political news" = "Non-political news"), name = ""
+        values = c("political news" = 16, "nonpolitical news" = 17),
+        labels = c("political news" = "Political news", "nonpolitical news" = "Nonpolitical news"), name = ""
     ) +
     facet_grid(type ~ case, scales = "free_y") +
     theme_bw() +
@@ -1453,21 +1458,22 @@ bind_rows(
     readRDS(paste0("processed_data/stats/", platform, "_entropy.RDS")) |>
         mutate(type = "Shannon's H")
 ) |>
+    mutate(case=ifelse(case=="USA","US",case)) |> 
     pivot_longer(cols = c(non_political, political)) |>
-    mutate(name = ifelse(name == "political", "political news", "non-political news")) |>
+    mutate(name = ifelse(name == "political", "political news", "nonpolitical news")) |>
     ggplot(aes(x = factor(cutoff), y = value, col = name, shape = name)) +
     geom_point(size = 3) +
     geom_hline(yintercept = 0, linetype = "dashed", color = "transparent") +
     scale_color_manual(
         values = c(
             "political news" = "#AA8939",
-            "non-political news" = "#303C74"
+            "nonpolitical news" = "#303C74"
         ),
-        labels = c("political news" = "Political news", "non-political news" = "Non-political news"), name = ""
+        labels = c("political news" = "Political news", "nonpolitical news" = "Nonpolitical news"), name = ""
     ) +
     scale_shape_manual(
-        values = c("political news" = 16, "non-political news" = 17),
-        labels = c("political news" = "Political news", "non-political news" = "Non-political news"), name = ""
+        values = c("political news" = 16, "nonpolitical news" = 17),
+        labels = c("political news" = "Political news", "nonpolitical news" = "Nonpolitical news"), name = ""
     ) +
     facet_grid(type ~ case, scales = "free_y") +
     theme_bw() +
@@ -2323,6 +2329,7 @@ outlets <- data.table(
     leftright = rep(c(-1, 1), 6)
 )
 
+outlets$country[outlets$country=="USA"] <- "US"
 # cols <- c("#E69F00", "#56B4E9")
 # cols <- c("#D71920", "#1A4782")
 cols <- c("#7E1F86","#EDE580")
@@ -2349,6 +2356,7 @@ ggplot() +
 
 ggsave(paste0("figures/", platform, "_density_plot_main.pdf"), height = 16, width = 10)
 
+dat$country[dat$country=="USA"] <- "US"
 ggplot() +
     geom_density(data = dat[leftright != 0 & cutoff == 3], aes(x = diet_slant, linetype = as.factor(leftright), fill = as.factor(leftright)), color = "grey25", alpha = 0.7) +
     # geom_vline(data = outlets, aes(xintercept = x, color = as.factor(leftright)), linetype = "dashed", linewidth = 1.5) +
@@ -2435,6 +2443,7 @@ outlets <- data.table(
 )
 
 outlets$variable <- factor(outlets$variable, levels = levs)
+dat_melt$political[dat_melt$political=="Non-political news"] <- "Nonpolitical news"
 
 ggplot() +
     geom_density(data = dat_melt[leftright != 0], aes(x = value, fill = as.factor(leftright), linetype = as.factor(leftright)), alpha = 0.7, color = "grey25", bw = 0.115) +
@@ -2641,12 +2650,15 @@ tidy_toplot_integrated <- read_csv(paste0("processed_data/regression/", platform
 dat <- tidy_toplot_integrated |>
     mutate(level = str_replace_all(level, "\\(B\\) Access", "\\(C\\) News Access")) |>
     mutate(level = str_replace_all(level, "\\(C\\) Political Interest", "\\(B\\) Political Interest")) |>
-    mutate(level = str_replace_all(level, "Direct", "Non-referred")) |>
+    mutate(level = str_replace_all(level, "Direct", "Nonreferred")) |>
     dplyr::filter(str_detect(level, "\\(A\\)|\\(B\\)|\\(C\\)")) |>
     mutate(level1 = str_remove_all(level, "\\(.*\\).*\\:\\s")) |>
     mutate(header = str_replace_all(header, "\\(B\\) Access", "\\(C\\) News Access")) |>
     mutate(header = str_replace_all(header, "\\(C\\) Political Interest", "\\(B\\) Political Interest"))
 
+dat$level[dat$level=="(A) Country: USA"] <- "(A) Country: US"
+dat$level1[dat$level1=="USA"] <- "US"
+dat$type[dat$type=="Non-Political News"] <- "Nonpolitical News"
 labels <- unique(dat$level1)
 names(labels) <- labels
 ggplot(dat, aes(y = Estimate, x = factor(threshold))) +
@@ -2862,6 +2874,7 @@ saveRDS(res, paste0("processed_data/stats/", platform, "top_outlet_align_no-top1
 ## plot
 dat <- readRDS(paste0("processed_data/stats/", platform, "top_outlet_align_no-top10.RDS"))
 dat[, visits_norm := visits / max(visits), by = .(country)]
+dat$country[dat$country=="USA"] <- "US"
 ggplot(dat, aes(x = align, size = visits_norm, label = domain)) +
     geom_point(y = 0) +
     geom_text(aes(alpha = visits_norm), y = 0, angle = 45, hjust = 1.1, vjust = 1, nudge_x = 0) +
