@@ -1744,7 +1744,7 @@ tidy_toplot <- tidy_toplot |>
     mutate(
         type = as.factor(type),
         type = dplyr::recode_factor(type,
-            "non_political" = "Non-political News",
+            "non_political" = "Nonpolitical News",
             "political" = "Political News"
         )
     ) |>
@@ -1760,12 +1760,12 @@ tidy_toplot |>
         position = position_dodge(0.6), size = 1
     ) +
     scale_color_manual(
-        values = c("Political News" = "#AA8939", "Non-political News" = "#303C74"),
-        labels = c("Political News" = "Political news", "Non-political News" = "Non-political news"), name = ""
+        values = c("Political News" = "#AA8939", "Nonpolitical News" = "#303C74"),
+        labels = c("Political News" = "Political news", "Nonpolitical News" = "Nonpolitical news"), name = ""
     ) +
     scale_shape_manual(
-        values = c("Political News" = 16, "Non-political News" = 17),
-        labels = c("Political News" = "Political news", "Non-political News" = "Non-political news"), name = ""
+        values = c("Political News" = 16, "Nonpolitical News" = 17),
+        labels = c("Political News" = "Political news", "Nonpolitical News" = "Nonpolitical news"), name = ""
     ) +
     coord_flip() +
     theme_bw() +
