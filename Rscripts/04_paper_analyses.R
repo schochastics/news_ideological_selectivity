@@ -1748,9 +1748,9 @@ tidy_toplot <- tidy_toplot |>
             "political" = "Political News"
         )
     ) |>
-    mutate(meta = str_replace_all(meta, "Bakshy et al.", "Bakshy et al. [52]")) |>
-    mutate(meta = str_replace_all(meta, "Budak et al.", "Budak et al. [41]")) |>
-    mutate(meta = str_replace_all(meta, "Robertson et al.", "Robertson et al. [64]"))
+    mutate(meta = str_replace_all(meta, "Bakshy et al.", "Bakshy et al. [51]")) |>
+    mutate(meta = str_replace_all(meta, "Budak et al.", "Budak et al. [40]")) |>
+    mutate(meta = str_replace_all(meta, "Robertson et al.", "Robertson et al. [63]"))
 
 tidy_toplot |>
     filter((term %in% to_keep)) |>
@@ -2420,9 +2420,9 @@ dat_melt <- dat_melt[!is.na(value)]
 
 dat_melt[, variable := fcase(
     variable == "diet_slant", "(A) Present data",
-    variable == "robertson", "(C) Robertson et al. [64] scores",
-    variable == "bakshy", "(B) Bakshy et al. [52] scores",
-    variable == "budak", "(D) Budak et al. [41] scores",
+    variable == "robertson", "(C) Robertson et al. [63] scores",
+    variable == "bakshy", "(B) Bakshy et al. [51] scores",
+    variable == "budak", "(D) Budak et al. [40] scores",
     variable == "allside_com", "(E) AllSides community scores",
     variable == "allside", "(F) AllSides controlled scores",
     variable == "pew", "(G) PEW scores",
@@ -2433,8 +2433,8 @@ dat_melt[, variable := factor(variable, levels = levs)]
 
 outlets <- data.table(
     variable = rep(c(
-        "(A) Present data", "(B) Bakshy et al. [52] scores", "(C) Robertson et al. [64] scores",
-        "(D) Budak et al. [41] scores", "(E) AllSides community scores", "(F) AllSides controlled scores",
+        "(A) Present data", "(B) Bakshy et al. [51] scores", "(C) Robertson et al. [63] scores",
+        "(D) Budak et al. [40] scores", "(E) AllSides community scores", "(F) AllSides controlled scores",
         "(G) PEW scores", "(H) Mturk scores"
     ), each = 2),
     domain = rep(c("CNN", "Fox News"), 8),
