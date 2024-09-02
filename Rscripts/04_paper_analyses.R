@@ -2020,13 +2020,13 @@ summary_scores <- bind_rows(sum_stat_diverse, sum_stat_partisan) |>
     mutate(
         type = as.factor(type),
         type = dplyr::recode_factor(type,
-            "non-political" = "Non-political News",
+            "non-political" = "Nonpolitical News",
             "political" = "Political News"
         )
     ) |>
-    mutate(meta = str_replace_all(meta, "Bakshy et al.", "Bakshy et al. [52]")) |>
-    mutate(meta = str_replace_all(meta, "Budak et al.", "Budak et al. [41]")) |>
-    mutate(meta = str_replace_all(meta, "Robertson et al.", "Robertson et al. [64]"))
+    mutate(meta = str_replace_all(meta, "Bakshy et al.", "Bakshy et al. [51]")) |>
+    mutate(meta = str_replace_all(meta, "Budak et al.", "Budak et al. [40]")) |>
+    mutate(meta = str_replace_all(meta, "Robertson et al.", "Robertson et al. [63]"))
 
 summary_scores$meta2 <- ifelse(
     grepl("News Diet Div", summary_scores$meta2),
@@ -2040,12 +2040,12 @@ ggplot(summary_scores, aes(y = score, x = factor(cutoff))) +
         size = 3
     ) +
     scale_color_manual(
-        values = c("Political News" = "#AA8939", "Non-political News" = "#303C74"),
-        labels = c("Political News" = "Political news", "Non-political News" = "Non-political news"), name = ""
+        values = c("Political News" = "#AA8939", "Nonpolitical News" = "#303C74"),
+        labels = c("Political News" = "Political news", "Nonpolitical News" = "Nonpolitical news"), name = ""
     ) +
     scale_shape_manual(
-        values = c("Political News" = 16, "Non-political News" = 17),
-        labels = c("Political News" = "Political news", "Non-political News" = "Non-political news"), name = ""
+        values = c("Political News" = 16, "Nonpolitical News" = 17),
+        labels = c("Political News" = "Political news", "Nonpolitical News" = "Nonpolitical news"), name = ""
     ) +
     theme_bw() +
     facet_grid(meta2 ~ meta, scales = "free_y") +
@@ -2357,6 +2357,7 @@ ggplot() +
 ggsave(paste0("figures/", platform, "_density_plot_main.pdf"), height = 16, width = 10)
 
 dat$country[dat$country=="USA"] <- "US"
+dat$political[dat$political=="Non-political news"] <- "Nonpolitical news"
 ggplot() +
     geom_density(data = dat[leftright != 0 & cutoff == 3], aes(x = diet_slant, linetype = as.factor(leftright), fill = as.factor(leftright)), color = "grey25", alpha = 0.7) +
     # geom_vline(data = outlets, aes(xintercept = x, color = as.factor(leftright)), linetype = "dashed", linewidth = 1.5) +
